@@ -19,6 +19,7 @@ TT_LESS = 'LESS'
 TT_GREATER_EQUALS = 'GREATER_EQUALS'
 TT_LESS_EQUALS = 'LESS_EQUALS'
 TT_EQUALS = 'EQUALS'
+TT_NOT_EQUALS = 'NOT_EQUALS'
 
 TT_LPAREN = 'LPAREN'
 TT_RPAREN = 'RPAREN'
@@ -174,6 +175,13 @@ class Operation:
                     if self.args[0].value == self.args[1].value:
                         return Token(TT_BOOL, 'TRUE'), None
                     return Token(TT_BOOL, 'FALSE'), None
+        elif self.operator.type == TT_NOT_EQUALS:
+            # if operator is binary
+            if len(self.args) == 2:
+                if self.all_satisfies(self.is_number) or self.all_of(TT_BOOL):
+                    if self.args[0].value != self.args[1].value:
+                        return Token(TT_BOOL, 'TRUE'), None
+                    return Token(TT_BOOL, 'FALSE'), None
         return None, RuntimeError('No such operator')
 
     # returns true if token is a number
@@ -215,5 +223,6 @@ OPERATORS = {
     TT_LESS,
     TT_GREATER_EQUALS,
     TT_LESS_EQUALS,
-    TT_EQUALS
+    TT_EQUALS,
+    TT_NOT_EQUALS
 }

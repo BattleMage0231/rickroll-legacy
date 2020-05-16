@@ -56,7 +56,7 @@ class Parser:
 
         # do all comparison operations
         reset()
-        error = self.evaluate_for_binary([TT_GREATER, TT_LESS, TT_GREATER_EQUALS, TT_LESS_EQUALS, TT_EQUALS])
+        error = self.evaluate_for_binary([TT_GREATER, TT_LESS, TT_GREATER_EQUALS, TT_LESS_EQUALS, TT_EQUALS, TT_NOT_EQUALS])
         if error != None:
             return None, error
 

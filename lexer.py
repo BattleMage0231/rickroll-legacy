@@ -1,6 +1,7 @@
+import re
 from basic import *
 
-SPECIAL_CHARACTERS = '&|<>='
+SPECIAL_CHARACTERS = '&|<>=!'
 
 class Lexer:
     def __init__(self, text, variable_cache=dict()):
@@ -47,7 +48,10 @@ class Lexer:
                 op, error = self.make_operator()
                 if error != None:
                     return None, error
-                tokens.append(op)
+                # if there is an operator
+                # even amounts of unary NOT will cancel eachother out
+                if op != None:
+                    tokens.append(op)
                 continue
             if self.cur_char == '+':
                 tokens.append(Token(TT_ADD))
@@ -62,9 +66,6 @@ class Lexer:
                 tokens.append(Token(TT_MULTIPLY))
             elif self.cur_char == '/':
                 tokens.append(Token(TT_DIVIDE)) 
-            elif self.cur_char == '!':
-                # unary NOT operator for boolean operand
-                tokens.append(Token(TT_NOT))
             elif self.cur_char == '(':
                 tokens.append(Token(TT_LPAREN)) 
                 parenthesis_balance += 1
@@ -157,4 +158,8 @@ class Lexer:
             return Token(TT_LESS_EQUALS), None
         if operator == '==':
             return Token(TT_EQUALS), None
+        if operator == '!=':
+            return Token(TT_NOT_EQUALS), None
+        if re.match('^!+$', operator):
+            return (Token(TT_NOT), None) if len(operator) % 2 == 1 else (None, None)
         return None, RuntimeError('Operator ' + operator + ' not found')
