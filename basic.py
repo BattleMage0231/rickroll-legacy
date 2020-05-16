@@ -48,6 +48,10 @@ class IllegalArgumentError(Error):
     def __init__(self, details):
         super().__init__('Illegal Argument', details)
 
+class SyntaxError(Error):
+    def __init__(self, details):
+        super().__init__('Syntax Error', details)
+
 # Token
 
 class Token:
