@@ -1,4 +1,4 @@
-# TODO: implement booleans, strings, loops, if statement, chorus
+# TODO: implement strings, chorus
 
 import re
 from basic import *
@@ -21,8 +21,9 @@ IF_END = '^Your heart\'s been aching but you\'re too shy to say it$'
 
 class Interpreter: 
     def __init__(self, text=None):
+        global_context = Context(None)
         self.text = text.split('\n') if text else []
-        self.variable_cache = dict()
+        self.cur_context = global_context
 
     def append(self, line):
         self.text.append(line)
@@ -54,12 +55,10 @@ class Interpreter:
                     print(res.value)
             elif re.match(DECLARE, line):
                 name = line[16 : -5] # variable name
-                # if variable already exists
-                if name in self.variable_cache:
-                    print(RuntimeError('Variable ' + name + ' already exists').as_string())
-                else:
-                    # create new undefined token since we don't know type
-                    self.variable_cache[name] = Token(TT_UNDEFINED, 'UNDEFINED')
+                # add variable to current context
+                error = self.cur_context.add_var(name, Token(TT_UNDEFINED, 'UNDEFINED'))
+                if error != None:
+                    print(error.as_string())
             elif re.match(ASSIGN, line):
                 value = line[17 : ] # get arguments as raw text
                 index = value.find(' ') # variable names cannot have spaces
@@ -69,15 +68,14 @@ class Interpreter:
                 else:
                     name = value[ : index] # everything before space is name
                     expr = value[index : ] # everything after is expression
-                    # if variable exists
-                    if name in self.variable_cache:
-                        # assign evaluated result to variable
-                        self.variable_cache[name], error = self.evaluate(expr)
-                        # if error occured
+                    value, error = self.evaluate(expr)
+                    if error != None:
+                        print(error.as_string())
+                    else:
+                        # set variable
+                        error = self.cur_context.set_var(name, value)
                         if error != None:
                             print(error.as_string())
-                    else:
-                        print(RuntimeError('Variable ' + name + ' does not exist').as_string())
             elif re.match(CHECK_TRUE, line):
                 expr = line[20 : ] # get boolean expression
                 res, error = self.evaluate(expr)
@@ -89,6 +87,7 @@ class Interpreter:
                         # if true, execute the inside
                         if res.value == 'TRUE':
                             loop_stack.append(pos)
+                            self.cur_context = Context(self.cur_context) # make new context
                         else:
                             # else skip to the end
                             while pos < len(self.text) and not (re.match(WHILE_END, self.text[pos].strip()) or re.match(IF_END, self.text[pos].strip())):
@@ -106,6 +105,7 @@ class Interpreter:
                 else:
                     # if statement end, simply pop
                     loop_stack.pop()
+                    self.cur_context = self.cur_context.parent # remove context
             elif re.match(WHILE_END, line):
                 # if loop stack is empty
                 if not loop_stack:
@@ -114,6 +114,7 @@ class Interpreter:
                     # reset position to the original position - 1
                     # pos gets incremented at the end of this loop
                     pos = loop_stack.pop() - 1
+                    self.cur_context = self.cur_context.parent # remove context
             else:
                 print('Other!')
             pos += 1
@@ -123,7 +124,7 @@ class Interpreter:
 
     # evaluates an expression using expression_parser and lexer
     def evaluate(self, text):
-        l = Lexer(text, self.variable_cache)
+        l = Lexer(text, self.cur_context) # pass in current context as a parameter
         tokens, error = l.make_tokens()
         if error:
             return None, error
