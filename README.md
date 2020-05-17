@@ -12,7 +12,7 @@ Run the following line in a directory with git.
 git clone https://github.com/BattleMage0231/rickroll.git
 ```
 
-To enter the shell, run this in the folder with python installed.
+To enter the shell, run this in the directory with python installed.
 
 ```
 python shell.py
