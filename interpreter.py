@@ -102,11 +102,28 @@ class Interpreter:
                             self.cur_context = Context(self.cur_context) # make new context
                         else:
                             # else skip to the end
-                            while pos < len(self.text) and not (re.match(WHILE_END, self.text[pos].strip()) or re.match(IF_END, self.text[pos].strip())):
+                            pos += 1
+                            loop_balance = 1 # start with current CHECK_TRUE statement
+                            # while pos is not end of program and loop is not balanced
+                            while pos < len(self.text) and loop_balance != 0:
+                                # new CHECK_TRUE statement
+                                if re.match(CHECK_TRUE, self.text[pos].strip()):
+                                    loop_balance += 1
+                                elif re.match(IF_END, self.text[pos].strip()) or re.match(WHILE_END, self.text[pos].strip()):
+                                    # new closing statement
+                                    loop_balance -= 1
+                                # error, loop not balanced
+                                if loop_balance < 0:
+                                    break
                                 pos += 1
-                            # if there's no ending statement
-                            if pos == len(self.text):
+                            # if position is end of file and balance is not 0
+                            # then the loop is not balanced
+                            if loop_balance != 0 and pos == len(self.text):
                                 print(RuntimeError('Unexpected EOF').as_string())
+                            else:
+                                # position was already incremented to the next
+                                # during the while loop so no need for pos += 1
+                                continue
                     else:
                         # if result is not a boolean
                         print(IllegalArgumentError('Boolean expected').as_string())
