@@ -4,9 +4,9 @@ from basic import *
 SPECIAL_CHARACTERS = '&|<>=!'
 
 class Lexer:
-    def __init__(self, text, variable_cache=dict()):
+    def __init__(self, text, context):
         self.text = text
-        self.variable_cache = variable_cache
+        self.context = context
         self.pos = -1
         self.cur_char = None
         self.unary_minus = False # initially there is no unary minus
@@ -125,15 +125,21 @@ class Lexer:
     def make_variable(self):
         name = ''
         # while character exists and is still alphanumeric
-        while self.cur_char != None and self.cur_char.isalpha():
+        while self.cur_char != None and (self.cur_char.isalpha() or self.cur_char == '_'):
             name += self.cur_char
             self.advance()
         # if name is a language constant
         if name in CONSTANTS:
             return CONSTANTS[name], None
         # if variable exists
-        if name in self.variable_cache:
-            return self.variable_cache[name], None
+        # look for it in context
+        cur_context = self.context
+        while cur_context != None:
+            # if variable exists in this context, return it
+            if name in cur_context.variable_cache:
+                return cur_context.variable_cache[name], None
+            cur_context = cur_context.parent
+        # otherwise variable was not found
         return None, RuntimeError('Variable ' + name + ' not found')
 
     # parses complex operators (non-binary, multiple characters, etc)
