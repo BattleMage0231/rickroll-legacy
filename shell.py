@@ -21,14 +21,19 @@ in_editor = False
 line = 1
 
 while True:
+    # if currently editing code
     if in_editor:
+        # format in yellow
         text = input(in_color('line ' + str(line) + ' > ', COLOR_YELLOW))
+        # detect for exiting editor
         if text.strip() == 'exit':
             in_editor = False
         else:
+            # otherwise append text to program
             inter.append(text)
             line += 1
     else:
+        # otherwise in console
         text = input(in_color('rickroll > ', COLOR_GREEN)).strip()
         if text == 'edit':
             in_editor = True
@@ -36,6 +41,7 @@ while True:
             inter.execute()
         elif re.match('^delete \d+$', text):
             index = int(text[7 : ])
+            # if index in bounds
             if index < line:
                 inter.pop(index)
                 line -= 1
@@ -43,6 +49,7 @@ while True:
                 print(in_color('No such index', COLOR_RED))
         elif re.match('^insert \d+$', text):
             index = int(text[7 : ])
+            # if index in bounds or one after (new line)
             if index <= line:
                 text = input(in_color('line ' + str(index) + ' > ', COLOR_YELLOW))
                 inter.insert(index, text)
@@ -51,6 +58,7 @@ while True:
                 print(in_color('No such index', COLOR_RED))
         elif re.match('^replace \d+$', text):
             index = int(text[8 : ])
+            # if index in bounds
             if index < line:
                 text = input(in_color('line ' + str(index) + ' > ', COLOR_YELLOW))
                 inter.replace(index, text)
@@ -65,6 +73,6 @@ while True:
                 index += 1
         elif text == 'new':
             inter = interpreter.Interpreter()
-            line = 1
+            line = 1 # reset line
         elif text == 'exit':
             exit()
