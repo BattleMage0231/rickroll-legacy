@@ -28,6 +28,18 @@ class Interpreter:
     def append(self, line):
         self.text.append(line)
 
+    # one indexed
+    def pop(self, index):
+        self.text.pop(index - 1)
+
+    # one indexed
+    def insert(self, index, text):
+        self.text.insert(index - 1, text)
+
+    # one indexed
+    def replace(self, index, text):
+        self.text[index - 1] = text
+
     def execute(self):
         inMain = False
         loop_stack = [] # stores lines of loop declarations
