@@ -204,6 +204,53 @@ class Operation:
     def any_satisfies(self, function):
         return any([function(operand) for operand in self.args])
 
+# Context
+
+# stores information about the scope of a block
+# like the current variable cache and the parent blocks 
+class Context:
+    def __init__(self, parent):
+        self.parent = parent
+        self.variable_cache = dict()
+
+    # adds a variable to the current variable cache
+    def add_var(self, name, value):
+        # see if any variable with same name exists
+        cur_context = self
+        while cur_context != None:
+            if name in cur_context.variable_cache:
+                return RuntimeError('Variable ' + name + ' already exists')
+            cur_context = cur_context.parent
+        # assign to current variable cache if not
+        self.variable_cache[name] = value
+
+    # sets the value of a variable
+    def set_var(self, name, value):
+        # checks if variable exists
+        cur_context = self
+        while cur_context != None:
+            # if this context contains the variable
+            if name in cur_context.variable_cache:
+                # update in sepearate context
+                cur_context.variable_cache[name] = value
+                return None
+            cur_context = cur_context.parent
+        # if not throw an error
+        return RuntimeError('Variable ' + name + ' doesn\'t exist')
+    
+    # gets the value of a variable with name
+    def get_var(self, name):
+        # checks if variable exists
+        cur_context = self
+        while cur_context != None:
+            # if this context contains the variable
+            if name in cur_context.variable_cache:
+                # return it
+                return cur_context.variable_cache[name], None
+            cur_context = cur_context.parent
+        # if not throw an error
+        return None, RuntimeError('Variable ' + name + ' doesn\'t exist')
+
 # Variable Constants
 
 CONSTANTS = {
@@ -226,3 +273,5 @@ OPERATORS = {
     TT_EQUALS,
     TT_NOT_EQUALS
 }
+
+global_context = Context(None)
