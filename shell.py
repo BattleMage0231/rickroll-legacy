@@ -52,7 +52,7 @@ while True:
         elif re.match('^replace \d+$', text):
             index = int(text[8 : ])
             if index < line:
-                text = in_color('line ' + str(index) + ' > ', COLOR_YELLOW)
+                text = input(in_color('line ' + str(index) + ' > ', COLOR_YELLOW))
                 inter.replace(index, text)
                 line += 1
             else:
