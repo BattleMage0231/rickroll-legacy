@@ -66,6 +66,8 @@ class Lexer:
                 tokens.append(Token(TT_MULTIPLY))
             elif self.cur_char == '/':
                 tokens.append(Token(TT_DIVIDE)) 
+            elif self.cur_char == '%':
+                tokens.append(Token(TT_MODULO))
             elif self.cur_char == '(':
                 tokens.append(Token(TT_LPAREN)) 
                 parenthesis_balance += 1

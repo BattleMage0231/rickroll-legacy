@@ -44,7 +44,7 @@ class Parser:
 
         # do multiply and divide operations
         reset()
-        error = self.evaluate_for_binary([TT_MULTIPLY, TT_DIVIDE])
+        error = self.evaluate_for_binary([TT_MULTIPLY, TT_DIVIDE, TT_MODULO])
         if error != None:
             return None, error
 

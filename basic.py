@@ -9,6 +9,7 @@ TT_ADD = 'ADD'
 TT_SUBTRACT = 'SUBTRACT'
 TT_MULTIPLY = 'MULTIPLY'
 TT_DIVIDE = 'DIVIDE'
+TT_MODULO = 'MODULO'
 
 TT_AND = 'AND'
 TT_OR = 'OR'
@@ -117,6 +118,16 @@ class Operation:
                     if self.any_of(TT_FLOAT):
                         return Token(TT_FLOAT, self.args[0].value / self.args[1].value), None
                     return Token(TT_INT, self.args[0].value // self.args[1].value), None
+        elif self.operator.type == TT_MODULO:
+            # if operation is binary
+            if len(self.args) == 2:
+                # if arguments are numbers
+                if self.all_satisfies(self.is_number):
+                    # if any are float, do floating point division
+                    # else do integer division
+                    if self.any_of(TT_FLOAT):
+                        return Token(TT_FLOAT, self.args[0].value % self.args[1].value), None
+                    return Token(TT_INT, self.args[0].value % self.args[1].value), None
         elif self.operator.type == TT_AND:
             # if operator is binary
             if len(self.args) == 2:
@@ -263,6 +274,7 @@ OPERATORS = {
     TT_SUBTRACT,
     TT_MULTIPLY,
     TT_DIVIDE,
+    TT_MODULO,
     TT_AND,
     TT_OR,
     TT_NOT,
