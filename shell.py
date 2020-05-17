@@ -65,5 +65,6 @@ while True:
                 index += 1
         elif text == 'new':
             inter = interpreter.Interpreter()
+            line = 1
         elif text == 'exit':
             exit()
