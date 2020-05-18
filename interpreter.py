@@ -23,7 +23,7 @@ CHECK_TRUE = '^Inside we both know .+$'
 WHILE_END = '^We know the game and we\'re gonna play it$'
 IF_END = '^Your heart\'s been aching but you\'re too shy to say it$'
 
-ARGUMENT_TYPES = '(Ooh give you .+)'
+ARGUMENT_TYPES = '\(Ooh give you .+\)'
 RETURN = '^\(Ooh\) Never gonna give, never gonna give \(give you .+\)$'
 CALL = 'Never gonna run .+ and desert .+'
 CALL_VALUE = '\(Ooh give you \w+\) Never gonna run \w+ and desert .+'
@@ -53,6 +53,7 @@ class Interpreter:
         global_context = Context(None)
         self.cur_context = global_context
         cur_block = None
+        function_info = None
         loop_stack = [] # stores lines of loop declarations
         pos = 0
         while pos < len(self.text):
@@ -62,13 +63,24 @@ class Interpreter:
             elif re.match(INTRO, line):
                 cur_block = TT_INTRO
             elif re.match(VERSE, line):
+                if cur_block == TT_VERSE:
+                    self.cur_context.add_function(function_info[0], function_info[1], function_info[2])
                 cur_block = TT_VERSE
                 name = line[7 : -1]
+                pos += 1
+                if pos == len(self.text) or not re.match(ARGUMENT_TYPES, self.text[pos].strip()):
+                    print(SyntaxError('Unexpected EOF (no parameters provided)').as_string())
+                else:
+                    args = [arg.strip() for arg in self.text[pos].strip()[14 : -1].split() if arg.strip()]
+                    function_info = (name, args, [])
+                    print(args)
             elif re.match(CHORUS, line):
+                if cur_block == TT_VERSE:
+                    self.cur_context.add_function(function_info[0], function_info[1], function_info[2])
                 cur_block = TT_CHORUS
                 self.cur_context = Context(self.cur_context)
             elif cur_block == TT_VERSE:
-                raise NotImplementedError('Not yet implemented')
+                function_info[2].append(line)
             elif cur_block == TT_INTRO or cur_block == TT_CHORUS:
                 if re.match(SAY, line):
                     expr = line[16 : ] # get expression
