@@ -10,6 +10,10 @@ VERSE = '^\[Verse \w+\]$'
 CHORUS = '^\[Chorus\]$'
 INTRO = '^\[Intro\]$'
 
+TT_INTRO = 'INTRO'
+TT_VERSE = 'VERSE'
+TT_CHORUS = 'CHORUS'
+
 # statements
 SAY = '^Never gonna say .+$'
 DECLARE = '^Never gonna let \w+ down$'
@@ -41,7 +45,7 @@ class Interpreter:
         self.text[index - 1] = text
 
     def execute(self):
-        inMain = False
+        cur_block = None
         loop_stack = [] # stores lines of loop declarations
         pos = 0
         while pos < len(self.text):
@@ -49,101 +53,107 @@ class Interpreter:
             if line == '':
                 pass
             elif re.match(INTRO, line):
-                print('Intro!')
+                cur_block = TT_INTRO
             elif re.match(VERSE, line):
-                print('Verse!')
+                cur_block = TT_VERSE
+                name = line[7 : -1]
             elif re.match(CHORUS, line):
-                print('Chorus!')
-            elif re.match(SAY, line):
-                expr = line[16 : ] # get expression
-                # special command goodbye exits the program
-                if expr == 'goodbye':
-                    exit()
-                # evaluate expression and print
-                res, error = self.evaluate(expr)
-                if error != None:
-                    print(error.as_string())
-                else:
-                    print(res.value)
-            elif re.match(DECLARE, line):
-                name = line[16 : -5] # variable name
-                # add variable to current context
-                error = self.cur_context.add_var(name, Token(TT_UNDEFINED, 'UNDEFINED'))
-                if error != None:
-                    print(error.as_string())
-            elif re.match(ASSIGN, line):
-                value = line[17 : ] # get arguments as raw text
-                index = value.find(' ') # variable names cannot have spaces
-                # if no space found
-                if index == -1:
-                    print(IllegalArgumentError(value).as_string())
-                else:
-                    name = value[ : index] # everything before space is name
-                    expr = value[index : ] # everything after is expression
-                    value, error = self.evaluate(expr)
+                cur_block = TT_CHORUS
+            elif cur_block == TT_VERSE:
+                raise NotImplementedError('Not yet implemented')
+            elif cur_block == TT_INTRO or cur_block == TT_CHORUS:
+                if re.match(SAY, line):
+                    expr = line[16 : ] # get expression
+                    # special command goodbye exits the program
+                    if expr == 'goodbye':
+                        exit()
+                    # evaluate expression and print
+                    res, error = self.evaluate(expr)
                     if error != None:
                         print(error.as_string())
                     else:
-                        # set variable
-                        error = self.cur_context.set_var(name, value)
+                        print(res.value)
+                elif re.match(DECLARE, line):
+                    name = line[16 : -5] # variable name
+                    # add variable to current context
+                    error = self.cur_context.add_var(name, Token(TT_UNDEFINED, 'UNDEFINED'))
+                    if error != None:
+                        print(error.as_string())
+                elif re.match(ASSIGN, line):
+                    value = line[17 : ] # get arguments as raw text
+                    index = value.find(' ') # variable names cannot have spaces
+                    # if no space found
+                    if index == -1:
+                        print(IllegalArgumentError(value).as_string())
+                    else:
+                        name = value[ : index] # everything before space is name
+                        expr = value[index : ] # everything after is expression
+                        value, error = self.evaluate(expr)
                         if error != None:
                             print(error.as_string())
-            elif re.match(CHECK_TRUE, line):
-                expr = line[20 : ] # get boolean expression
-                res, error = self.evaluate(expr)
-                if error != None:
-                    print(error.as_string())
-                else:
-                    # check if result is a boolean
-                    if res.type == TT_BOOL:
-                        # if true, execute the inside
-                        if res.value == 'TRUE':
-                            loop_stack.append(pos)
-                            self.cur_context = Context(self.cur_context) # make new context
                         else:
-                            # else skip to the end
-                            pos += 1
-                            loop_balance = 1 # start with current CHECK_TRUE statement
-                            # while pos is not end of program and loop is not balanced
-                            while pos < len(self.text) and loop_balance != 0:
-                                # new CHECK_TRUE statement
-                                if re.match(CHECK_TRUE, self.text[pos].strip()):
-                                    loop_balance += 1
-                                elif re.match(IF_END, self.text[pos].strip()) or re.match(WHILE_END, self.text[pos].strip()):
-                                    # new closing statement
-                                    loop_balance -= 1
-                                # error, loop not balanced
-                                if loop_balance < 0:
-                                    break
-                                pos += 1
-                            # if position is end of file and balance is not 0
-                            # then the loop is not balanced
-                            if loop_balance != 0 and pos == len(self.text):
-                                print(RuntimeError('Unexpected EOF').as_string())
-                            else:
-                                # position was already incremented to the next
-                                # during the while loop so no need for pos += 1
-                                continue
+                            # set variable
+                            error = self.cur_context.set_var(name, value)
+                            if error != None:
+                                print(error.as_string())
+                elif re.match(CHECK_TRUE, line):
+                    expr = line[20 : ] # get boolean expression
+                    res, error = self.evaluate(expr)
+                    if error != None:
+                        print(error.as_string())
                     else:
-                        # if result is not a boolean
-                        print(IllegalArgumentError('Boolean expected').as_string())
-            elif re.match(IF_END, line):
-                # if loop stack is empty
-                if not loop_stack:
-                    print('Unexpected statement end')
+                        # check if result is a boolean
+                        if res.type == TT_BOOL:
+                            # if true, execute the inside
+                            if res.value == 'TRUE':
+                                loop_stack.append(pos)
+                                self.cur_context = Context(self.cur_context) # make new context
+                            else:
+                                # else skip to the end
+                                pos += 1
+                                loop_balance = 1 # start with current CHECK_TRUE statement
+                                # while pos is not end of program and loop is not balanced
+                                while pos < len(self.text) and loop_balance != 0:
+                                    # new CHECK_TRUE statement
+                                    if re.match(CHECK_TRUE, self.text[pos].strip()):
+                                        loop_balance += 1
+                                    elif re.match(IF_END, self.text[pos].strip()) or re.match(WHILE_END, self.text[pos].strip()):
+                                        # new closing statement
+                                        loop_balance -= 1
+                                    # error, loop not balanced
+                                    if loop_balance < 0:
+                                        break
+                                    pos += 1
+                                # if position is end of file and balance is not 0
+                                # then the loop is not balanced
+                                if loop_balance != 0 and pos == len(self.text):
+                                    print(RuntimeError('Unexpected EOF').as_string())
+                                else:
+                                    # position was already incremented to the next
+                                    # during the while loop so no need for pos += 1
+                                    continue
+                        else:
+                            # if result is not a boolean
+                            print(IllegalArgumentError('Boolean expected').as_string())
+                elif re.match(IF_END, line):
+                    # if loop stack is empty
+                    if not loop_stack:
+                        print('Unexpected statement end')
+                    else:
+                        # if statement end, simply pop
+                        loop_stack.pop()
+                        self.cur_context = self.cur_context.parent # remove context
+                elif re.match(WHILE_END, line):
+                    # if loop stack is empty
+                    if not loop_stack:
+                        print('Unexpected statement end')
+                    else:
+                        # reset position to the original position - 1
+                        # pos gets incremented at the end of this loop
+                        pos = loop_stack.pop() - 1
+                        self.cur_context = self.cur_context.parent # remove context
                 else:
-                    # if statement end, simply pop
-                    loop_stack.pop()
-                    self.cur_context = self.cur_context.parent # remove context
-            elif re.match(WHILE_END, line):
-                # if loop stack is empty
-                if not loop_stack:
-                    print('Unexpected statement end')
-                else:
-                    # reset position to the original position - 1
-                    # pos gets incremented at the end of this loop
-                    pos = loop_stack.pop() - 1
-                    self.cur_context = self.cur_context.parent # remove context
+                    print('Other!')
             else:
                 print('Other!')
             pos += 1
