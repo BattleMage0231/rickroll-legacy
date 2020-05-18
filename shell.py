@@ -15,6 +15,15 @@ COLOR_END = '\033[0m'
 def in_color(text, color):
     return color + text + COLOR_END
 
+def format_lineStr(line):
+    lineStr = str(line % 1000)
+    length = len(lineStr)
+    if length == 1:
+        return '  ' + lineStr
+    if length == 2:
+        return ' ' + lineStr
+    return lineStr
+
 inter = interpreter.Interpreter()
 
 in_editor = False
@@ -24,7 +33,7 @@ while True:
     # if currently editing code
     if in_editor:
         # format in yellow
-        text = input(in_color('line ' + str(line) + ' > ', COLOR_YELLOW))
+        text = input(in_color(format_lineStr(line) + ' > ', COLOR_YELLOW))
         # detect for exiting editor
         if text.strip() == 'exit':
             in_editor = False
@@ -51,7 +60,7 @@ while True:
             index = int(text[7 : ])
             # if index in bounds or one after (new line)
             if index <= line:
-                text = input(in_color('line ' + str(index) + ' > ', COLOR_YELLOW))
+                text = input(in_color(format_lineStr(index) + ' > ', COLOR_YELLOW))
                 inter.insert(index, text)
                 line += 1
             else:
@@ -60,7 +69,7 @@ while True:
             index = int(text[8 : ])
             # if index in bounds
             if index < line:
-                text = input(in_color('line ' + str(index) + ' > ', COLOR_YELLOW))
+                text = input(in_color(format_lineStr(index) + ' > ', COLOR_YELLOW))
                 inter.replace(index, text)
                 line += 1
             else:
@@ -69,7 +78,7 @@ while True:
             lines = inter.text
             index = 1
             for program_line in lines:
-                print(in_color('line ' + str(index) + ' > ', COLOR_YELLOW) + program_line)
+                print(in_color(format_lineStr(index) + ' > ', COLOR_YELLOW) + program_line)
                 index += 1
         elif text == 'new':
             inter = interpreter.Interpreter()
