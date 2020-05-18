@@ -223,6 +223,7 @@ class Context:
     def __init__(self, parent):
         self.parent = parent
         self.variable_cache = dict()
+        self.function_cache = dict() # name -> (args, src)
 
     # adds a variable to the current variable cache
     def add_var(self, name, value):
@@ -261,6 +262,22 @@ class Context:
             cur_context = cur_context.parent
         # if not throw an error
         return None, RuntimeError('Variable ' + name + ' doesn\'t exist')
+    
+    def add_function(self, name, args, src):
+        cur_context = self
+        while cur_context != None:
+            if name in cur_context.function_cache:
+                return RuntimeError('Function ' + name + ' already exists')
+            cur_context = cur_context.parent
+        self.function_cache[name] = (args, src)
+
+    def get_function(self, name):
+        cur_context = self
+        while cur_context != None:
+            if name in cur_context.function_cache:
+                return cur_context.function_cache[name], None
+            cur_context = cur_context.parent
+        return None, None, RuntimeError('Function ' + name + ' doesn\'t exist')
 
 # Variable Constants
 
