@@ -71,7 +71,6 @@ while True:
             if index < line:
                 text = input(in_color(format_lineStr(index) + ' > ', COLOR_YELLOW))
                 inter.replace(index, text)
-                line += 1
             else:
                 print(in_color('No such index', COLOR_RED))
         elif text == 'display':
