@@ -23,7 +23,10 @@ CHECK_TRUE = '^Inside we both know .+$'
 WHILE_END = '^We know the game and we\'re gonna play it$'
 IF_END = '^Your heart\'s been aching but you\'re too shy to say it$'
 
+ARGUMENT_TYPES = '(Ooh give you .+)'
 RETURN = '^\(Ooh\) Never gonna give, never gonna give \(give you .+\)$'
+CALL = 'Never gonna run .+ and desert .+'
+CALL_VALUE = '\(Ooh give you \w+\) Never gonna run \w+ and desert .+'
 
 class Interpreter: 
     def __init__(self, text=None):
