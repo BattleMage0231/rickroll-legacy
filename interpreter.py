@@ -45,6 +45,8 @@ class Interpreter:
         self.text[index - 1] = text
 
     def execute(self):
+        global_context = Context(None)
+        self.cur_context = global_context
         cur_block = None
         loop_stack = [] # stores lines of loop declarations
         pos = 0
@@ -59,6 +61,7 @@ class Interpreter:
                 name = line[7 : -1]
             elif re.match(CHORUS, line):
                 cur_block = TT_CHORUS
+                self.cur_context = Context(self.cur_context)
             elif cur_block == TT_VERSE:
                 raise NotImplementedError('Not yet implemented')
             elif cur_block == TT_INTRO or cur_block == TT_CHORUS:
