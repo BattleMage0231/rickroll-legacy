@@ -23,6 +23,8 @@ CHECK_TRUE = '^Inside we both know .+$'
 WHILE_END = '^We know the game and we\'re gonna play it$'
 IF_END = '^Your heart\'s been aching but you\'re too shy to say it$'
 
+RETURN = '^\(Ooh\) Never gonna give, never gonna give \(give you .+\)$'
+
 class Interpreter: 
     def __init__(self, text=None):
         global_context = Context(None)
@@ -155,6 +157,12 @@ class Interpreter:
                         # pos gets incremented at the end of this loop
                         pos = loop_stack.pop() - 1
                         self.cur_context = self.cur_context.parent # remove context
+                elif re.match(RETURN, line):
+                    return_val, error = self.evaluate(line[51 : -1])
+                    if error != None:
+                        print(error.as_string())
+                    else:
+                        return return_val
                 else:
                     print('Other!')
             else:
