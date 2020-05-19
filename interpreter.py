@@ -1,4 +1,4 @@
-# TODO: implement strings, chorus
+# TODO: implement strings
 
 import re
 from basic import *
@@ -69,7 +69,7 @@ class Interpreter:
                 if pos == len(self.text) or not re.match(ARGUMENT_NAMES, self.text[pos].strip()):
                     print(SyntaxError('Unexpected EOF (no parameters provided)').as_string())
                 else:
-                    args = [arg.strip() for arg in self.text[pos].strip()[14 : -1].split() if arg.strip()]
+                    args = [arg.strip() for arg in self.text[pos].strip()[14 : -1].split(' ') if arg.strip()]
                     if len(args) == 1 and args[0] == 'up':
                         args = []
                     function_info = (name, args, [])
@@ -182,7 +182,7 @@ class Interpreter:
                     index = value.find(' ')
                     name = value[ : index]
                     index = value.find('desert')
-                    args = [arg.strip() for arg in value[index + 7 : ].split() if arg.strip()]
+                    args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
                     res, error = self.exec(name, args)
                     if error != None:
                         print(error.as_string())
@@ -194,7 +194,7 @@ class Interpreter:
                     index = value.find(' ')
                     name = value[ : index]
                     index = value.find('desert')
-                    args = [arg.strip() for arg in value[index + 7 : ].split() if arg.strip()]
+                    args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
                     res, error = self.exec(name, args)
                     if error != None:
                         print(error.as_string())
@@ -225,7 +225,7 @@ class Interpreter:
             return None, error
         return res, None
 
-    # takes in function name and not evaluated arguments
+    # takes in function name and unevaluated arguments
     def exec(self, function, args):
         if args[0] == 'you':
             args = []
