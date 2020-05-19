@@ -225,6 +225,9 @@ class Context:
         self.variable_cache = dict()
         self.function_cache = dict() # name -> (args, src)
 
+    def __repr__(self):
+        return str([str(self.variable_cache), str(self.function_cache)])
+
     # adds a variable to the current variable cache
     def add_var(self, name, value):
         # see if any variable with same name exists
@@ -275,7 +278,7 @@ class Context:
         cur_context = self
         while cur_context != None:
             if name in cur_context.function_cache:
-                return cur_context.function_cache[name], None
+                return cur_context.function_cache[name][0], cur_context.function_cache[name][1], None
             cur_context = cur_context.parent
         return None, None, RuntimeError('Function ' + name + ' doesn\'t exist')
 
@@ -283,7 +286,8 @@ class Context:
 
 CONSTANTS = {
     'TRUE': Token(TT_BOOL, 'TRUE'),
-    'FALSE': Token(TT_BOOL, 'FALSE')
+    'FALSE': Token(TT_BOOL, 'FALSE'),
+    'UNDEFINED': Token(TT_UNDEFINED, 'UNDEFINED')
 }
 
 OPERATORS = {
@@ -302,5 +306,3 @@ OPERATORS = {
     TT_EQUALS,
     TT_NOT_EQUALS
 }
-
-global_context = Context(None)
