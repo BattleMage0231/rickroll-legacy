@@ -1,7 +1,7 @@
 import re
 from basic import *
 
-SPECIAL_CHARACTERS = '&|<>=!'
+SPECIAL_CHARACTERS = '&|<>=!:#'
 
 class Lexer:
     def __init__(self, text, context):
@@ -77,6 +77,10 @@ class Lexer:
                 # checks parenthesis balance
                 if parenthesis_balance < 0:
                     return None, IllegalCharError('Unbalanced parenthesis')
+            elif self.cur_char == '!':
+                tokens.append(Token(TT_NOT))
+            elif self.cur_char == '$':
+                tokens.append(Token(TT_ARRAY_GETLENGTH))
             elif self.cur_char.isspace():
                 pass
             else:
@@ -168,6 +172,8 @@ class Lexer:
             return Token(TT_EQUALS), None
         if operator == '!=':
             return Token(TT_NOT_EQUALS), None
-        if re.match('^!+$', operator):
-            return (Token(TT_NOT), None) if len(operator) % 2 == 1 else (None, None)
+        if operator == '#':
+            return Token(TT_ARRAY_APPEND), None
+        if operator == ':':
+            return Token(TT_ARRAY_ACCESS), None
         return None, RuntimeError('Operator ' + operator + ' not found')

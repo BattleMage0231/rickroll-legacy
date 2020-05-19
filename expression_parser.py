@@ -1,5 +1,9 @@
 from basic import *
 
+class UnaryConstants:
+    CANCEL_OUT = 'CANCEL_OUT'
+    ERROR = 'ERROR'
+
 class Parser:
     def __init__(self, tokens):
         self.tokens = tokens
@@ -36,9 +40,21 @@ class Parser:
                 break
             self.advance()
 
+        # do array append and access operation
+        reset()
+        error = self.evaluate_for_binary([TT_ARRAY_APPEND, TT_ARRAY_ACCESS])
+        if error != None:
+            return None, error
+
         # do unary NOT operation
         reset()
-        error = self.evaluate_for_unary([TT_NOT])
+        error = self.evaluate_for_unary([TT_NOT], UnaryConstants.CANCEL_OUT)
+        if error != None:
+            return None, error
+
+        # do unary GETLENGTH operation
+        reset()
+        error = self.evaluate_for_unary([TT_ARRAY_GETLENGTH], UnaryConstants.ERROR)
         if error != None:
             return None, error
 
@@ -89,7 +105,7 @@ class Parser:
 
         # if type of answer is not a data type
         # probably impossible
-        if last.type != TT_FLOAT and last.type != TT_INT and last.type != TT_UNDEFINED and last.type != TT_BOOL:
+        if not self.is_data_type(last):
             return None, RuntimeError('Not a statement')
         return last,  None
 
@@ -127,18 +143,21 @@ class Parser:
 
     # assumes two operations in a row cancel eachother out
     # and left to right associativity
-    def evaluate_for_unary(self, operators):
+    def evaluate_for_unary(self, operators, stack_mode=UnaryConstants.CANCEL_OUT):
         last = None
         lastOp =  None
         while self.cur_token != None:
             if self.is_operator(self.cur_token):
                 # if there is a previous NOT, remove both since NOT cancels itself
                 if self.cur_token.type in operators and lastOp != None and lastOp.type in operators:
-                    # [operator, operand] -> []
-                    for i in range(2):
-                        self.tokens.pop(self.pos)
-                        self.pos -= 1
-                    lastOp = None
+                    if stack_mode == UnaryConstants.CANCEL_OUT:
+                        # [operator, operand] -> []
+                        for i in range(2):
+                            self.tokens.pop(self.pos)
+                            self.pos -= 1
+                        lastOp = None
+                    elif stack_mode == UnaryConstants.ERROR:
+                        return RuntimeError(str(self.cur_token.type) + ' cannot be chained')
                 else:
                     lastOp = self.cur_token
             elif self.is_data_type(self.cur_token):
@@ -178,7 +197,7 @@ class Parser:
     # returns true if token is data type
     def is_data_type(self, token):
         return token.type == TT_INT or token.type == TT_FLOAT or token.type == TT_BOOL\
-        or token.type == TT_UNDEFINED
+        or token.type == TT_UNDEFINED or token.type == TT_ARRAY
     
     # performs and returns result of binary operation
     def eval_binary(self, left, operation, right):

@@ -48,8 +48,6 @@ while True:
             in_editor = True
         elif text == 'run':
             code = inter.execute(basic.Context(None))
-            if code != None:
-                print('The program finished with return value ' + str(code))
         elif re.match('^delete \d+$', text):
             index = int(text[7 : ])
             # if index in bounds

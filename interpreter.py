@@ -1,4 +1,5 @@
-# TODO: implement strings
+# TODO: add built in functions and array functions
+# once done can remove some symbolic array operators (ex. #, $)
 
 import re
 from basic import *
@@ -234,8 +235,6 @@ class Interpreter:
             return None, error 
         tmp_interpreter = Interpreter()
         tmp_interpreter.append('[Chorus]')
-        #print(args)
-        #print(func_args)
         if len(args) == len(func_args):
             for i in range(len(args)):
                 tmp_interpreter.append('Never gonna let ' + func_args[i] + ' down')
