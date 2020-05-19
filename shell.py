@@ -47,7 +47,7 @@ while True:
         if text == 'edit':
             in_editor = True
         elif text == 'run':
-            code = inter.execute()
+            code = inter.execute(basic.Context(None))
             if code != None:
                 print('The program finished with return value ' + str(code))
         elif re.match('^delete \d+$', text):
