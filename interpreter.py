@@ -23,16 +23,14 @@ CHECK_TRUE = '^Inside we both know .+$'
 WHILE_END = '^We know the game and we\'re gonna play it$'
 IF_END = '^Your heart\'s been aching but you\'re too shy to say it$'
 
-ARGUMENT_TYPES = '\(Ooh give you .+\)'
+ARGUMENT_NAMES = '\(Ooh give you .+\)'
 RETURN = '^\(Ooh\) Never gonna give, never gonna give \(give you .+\)$'
 CALL = 'Never gonna run .+ and desert .+'
 CALL_VALUE = '\(Ooh give you \w+\) Never gonna run \w+ and desert .+'
 
 class Interpreter: 
     def __init__(self, text=None):
-        global_context = Context(None)
         self.text = text.split('\n') if text else []
-        self.cur_context = global_context
 
     def append(self, line):
         self.text.append(line)
@@ -49,9 +47,9 @@ class Interpreter:
     def replace(self, index, text):
         self.text[index - 1] = text
 
-    def execute(self):
-        global_context = Context(None)
-        self.cur_context = global_context
+    def execute(self, context):
+        self.global_context = context
+        self.cur_context = self.global_context
         cur_block = None
         function_info = None
         loop_stack = [] # stores lines of loop declarations
@@ -68,12 +66,13 @@ class Interpreter:
                 cur_block = TT_VERSE
                 name = line[7 : -1]
                 pos += 1
-                if pos == len(self.text) or not re.match(ARGUMENT_TYPES, self.text[pos].strip()):
+                if pos == len(self.text) or not re.match(ARGUMENT_NAMES, self.text[pos].strip()):
                     print(SyntaxError('Unexpected EOF (no parameters provided)').as_string())
                 else:
                     args = [arg.strip() for arg in self.text[pos].strip()[14 : -1].split() if arg.strip()]
+                    if len(args) == 1 and args[0] == 'up':
+                        args = []
                     function_info = (name, args, [])
-                    print(args)
             elif re.match(CHORUS, line):
                 if cur_block == TT_VERSE:
                     self.cur_context.add_function(function_info[0], function_info[1], function_info[2])
@@ -96,7 +95,7 @@ class Interpreter:
                 elif re.match(DECLARE, line):
                     name = line[16 : -5] # variable name
                     # add variable to current context
-                    error = self.cur_context.add_var(name, Token(TT_UNDEFINED, 'UNDEFINED'))
+                    error = self.cur_context.add_var(name, CONSTANTS['UNDEFINED'])
                     if error != None:
                         print(error.as_string())
                 elif re.match(ASSIGN, line):
@@ -158,7 +157,7 @@ class Interpreter:
                 elif re.match(IF_END, line):
                     # if loop stack is empty
                     if not loop_stack:
-                        print('Unexpected statement end')
+                        print(RuntimeError('Unexpected statement end').as_string())
                     else:
                         # if statement end, simply pop
                         loop_stack.pop()
@@ -166,7 +165,7 @@ class Interpreter:
                 elif re.match(WHILE_END, line):
                     # if loop stack is empty
                     if not loop_stack:
-                        print('Unexpected statement end')
+                        print(RuntimeError('Unexpected statement end').as_string())
                     else:
                         # reset position to the original position - 1
                         # pos gets incremented at the end of this loop
@@ -178,6 +177,31 @@ class Interpreter:
                         print(error.as_string())
                     else:
                         return return_val
+                elif re.match(CALL, line):
+                    value = line[16 : ]
+                    index = value.find(' ')
+                    name = value[ : index]
+                    index = value.find('desert')
+                    args = [arg.strip() for arg in value[index + 7 : ].split() if arg.strip()]
+                    res, error = self.exec(name, args)
+                    if error != None:
+                        print(error.as_string())
+                elif re.match(CALL_VALUE, line):
+                    value = line[14 : ]
+                    index = value.find(' ')
+                    return_var = value[ : index - 1]
+                    value = value[index + 17 : ]
+                    index = value.find(' ')
+                    name = value[ : index]
+                    index = value.find('desert')
+                    args = [arg.strip() for arg in value[index + 7 : ].split() if arg.strip()]
+                    res, error = self.exec(name, args)
+                    if error != None:
+                        print(error.as_string())
+                    else:
+                        error = self.cur_context.set_var(return_var, res)
+                        if error != None:
+                            print(error.as_string())
                 else:
                     print('Other!')
             else:
@@ -188,8 +212,10 @@ class Interpreter:
             print(RuntimeError('Unexpected EOF').as_string())
 
     # evaluates an expression using expression_parser and lexer
-    def evaluate(self, text):
-        l = Lexer(text, self.cur_context) # pass in current context as a parameter
+    def evaluate(self, text, context=None):
+        if context == None:
+            context = self.cur_context
+        l = Lexer(text, context) # pass in current context as a parameter
         tokens, error = l.make_tokens()
         if error:
             return None, error
@@ -198,3 +224,29 @@ class Interpreter:
         if error:
             return None, error
         return res, None
+
+    # takes in function name and not evaluated arguments
+    def exec(self, function, args):
+        if args[0] == 'you':
+            args = []
+        func_args, src, error = self.cur_context.get_function(function)
+        if error != None:
+            return None, error 
+        tmp_interpreter = Interpreter()
+        tmp_interpreter.append('[Chorus]')
+        #print(args)
+        #print(func_args)
+        if len(args) == len(func_args):
+            for i in range(len(args)):
+                tmp_interpreter.append('Never gonna let ' + func_args[i] + ' down')
+                res, error = self.evaluate(args[i])
+                if error != None:
+                    return None, error
+                tmp_interpreter.append('Never gonna give ' + func_args[i] + ' ' + str(res.value))
+            for line in src:
+                tmp_interpreter.append(line)
+            tmp_interpreter.append('(Ooh) Never gonna give, never gonna give (give you UNDEFINED)')
+            res = tmp_interpreter.execute(self.global_context)
+            return res, None 
+        else:
+            return None, SyntaxError('Too many or too little arguments')
