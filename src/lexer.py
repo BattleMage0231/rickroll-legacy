@@ -67,7 +67,10 @@ class Lexer:
                 elif char == '\\':
                     # otherwise if there is an escape character, read the next one instead
                     self.advance()
-                    char = self.cur_char
+                    if self.cur_char == 'n':
+                        char = '\n'
+                    else:
+                        char = self.cur_char
                 self.advance()
                 # if no ending quote found
                 if self.cur_char != '\'':

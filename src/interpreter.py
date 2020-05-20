@@ -1,4 +1,5 @@
 import re
+import sys
 from basic import *
 from lexer import *
 from expression_parser import *
@@ -341,12 +342,12 @@ class Interpreter:
                     return None, IllegalArgumentError('Unsupported argument types')
             else:
                 return None, SyntaxError('Too many or too little arguments')
-        elif function == FUNCTION_PRINTSTR:
+        elif function == FUNCTION_PUTCHAR:
             if len(args) == 1:
-                # tkaes parameter [array]
-                if args[0].type == TT_ARRAY:
+                # takes parameter [char]
+                if args[0].type == TT_CHAR:
                     tmp_arr = args[0].value[:] # clone array
-                    print(''.join(map(str, tmp_arr)))
+                    sys.stdout.write(args[0].value)
                     return CONSTANTS['UNDEFINED'], None
                 else:
                     return None, IllegalArgumentError('Unsupported argument types')
