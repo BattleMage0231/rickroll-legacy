@@ -1,6 +1,7 @@
 from basic import *
 
 class UnaryConstants:
+    # constants for how to handle chained unary operators
     CANCEL_OUT = 'CANCEL_OUT'
     ERROR = 'ERROR'
 
@@ -103,6 +104,7 @@ class Parser:
             return None, RuntimeError('Not a statement')
         return last,  None
 
+    # evaluate for binary operators
     def evaluate_for_binary(self, operators):
         last = None
         lastOp = None

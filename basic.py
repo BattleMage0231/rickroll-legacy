@@ -210,10 +210,14 @@ class Operation:
                         return Token(TT_BOOL, 'TRUE'), None
                     return Token(TT_BOOL, 'FALSE'), None
         elif self.operator.type == TT_ARRAY_ACCESS:
+            # if operator is binary
             if len(self.args) == 2:
+                # if arguments are array and int
                 if self.args[0].type == TT_ARRAY and self.args[1].type == TT_INT:
+                    # if index is not in range
                     if len(self.args[0].value) <= self.args[1].value or self.args[1].value < 0:
                         return None, RuntimeError('Array index out of bounds')
+                    # return value at index
                     return self.args[0].value[self.args[1].value], None
         return None, RuntimeError('No such operator')
 
@@ -288,18 +292,25 @@ class Context:
         # if not throw an error
         return None, RuntimeError('Variable ' + name + ' doesn\'t exist')
     
+    # add function with name, arguments, source code
     def add_function(self, name, args, src):
         cur_context = self
+        # check duplicate names
         while cur_context != None:
             if name in cur_context.function_cache:
                 return RuntimeError('Function ' + name + ' already exists')
             cur_context = cur_context.parent
+        # add tuple of function info (string array, string array)
         self.function_cache[name] = (args, src)
 
+    # get arguments and source code of function with name
+    # returns (string array, string array) = (arguments, code lines)
     def get_function(self, name):
         cur_context = self
+        # find function if it exists
         while cur_context != None:
             if name in cur_context.function_cache:
+                # return tuple
                 return cur_context.function_cache[name][0], cur_context.function_cache[name][1], None
             cur_context = cur_context.parent
         return None, None, RuntimeError('Function ' + name + ' doesn\'t exist')
@@ -331,7 +342,7 @@ OPERATORS = {
     TT_ARRAY_ACCESS
 }
 
-# name -> args
+# stores names of built-in functions
 FUNCTION_CONSTANTS = [
     FUNCTION_POP,
     FUNCTION_PUSH,

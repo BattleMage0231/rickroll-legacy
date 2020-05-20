@@ -53,20 +53,26 @@ class Lexer:
                 if op != None:
                     tokens.append(op)
                 continue
+            # if character is start of a char variable
             if self.cur_char == '\'':
                 self.advance()
                 char = self.cur_char
+                # if current char is another quote, there is nothing in the middle
+                # thus make an empty character
                 if char == '\'':
                     char = ''
                     tokens.append(Token(TT_CHAR, char))
                     self.advance()
                     continue
                 elif char == '\\':
+                    # otherwise if there is an escape character, read the next one instead
                     self.advance()
                     char = self.cur_char
                 self.advance()
+                # if no ending quote found
                 if self.cur_char != '\'':
                     return None, SyntaxError('Unbalanced char quotations')
+                # append char
                 tokens.append(Token(TT_CHAR, char))
                 self.advance()
                 continue
