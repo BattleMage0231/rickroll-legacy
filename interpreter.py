@@ -342,11 +342,11 @@ class Interpreter:
             else:
                 return None, SyntaxError('Too many or too little arguments')
         elif function == FUNCTION_PRINTSTR:
-            if len(args) == 2:
-                # tkaes parameters [array, char_delimiter]
-                if args[0].type == TT_ARRAY and args[1].type == TT_CHAR:
+            if len(args) == 1:
+                # tkaes parameter [array]
+                if args[0].type == TT_ARRAY:
                     tmp_arr = args[0].value[:] # clone array
-                    print(args[1].value.join(map(str, tmp_arr)))
+                    print(''.join(map(str, tmp_arr)))
                     return CONSTANTS['UNDEFINED'], None
                 else:
                     return None, IllegalArgumentError('Unsupported argument types')
@@ -363,5 +363,12 @@ class Interpreter:
                     return Token(TT_INT, len(args[0].value)), None
                 else:
                     return None, IllegalArgumentError('Unsupported argument types')
+            else:
+                return None, SyntaxError('Too many or too little arguments')
+        elif function == FUNCTION_INPUT:
+            # takes no parameters
+            if len(args) == 0:
+                char_arr = [Token(TT_CHAR, char) for char in list(input())]
+                return Token(TT_ARRAY, char_arr), None
             else:
                 return None, SyntaxError('Too many or too little arguments')
