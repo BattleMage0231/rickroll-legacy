@@ -1,6 +1,3 @@
-# TODO: add built in functions and array functions
-# once done can remove some symbolic array operators (ex. #, $)
-
 import re
 from basic import *
 from lexer import *
