@@ -7,11 +7,11 @@ TT_BOOL = 'BOOL'
 
 TT_ARRAY = 'ARRAY'
 
+TT_CHAR = 'CHAR'
+
 TT_UNDEFINED = 'UNDEFINED'
 
-TT_ARRAY_APPEND = 'ARRAY_APPEND'
 TT_ARRAY_ACCESS = 'ARRAY_ACCESS'
-TT_ARRAY_GETLENGTH = 'ARRAY_GETLENGTH'
 
 TT_ADD = 'ADD'
 TT_SUBTRACT = 'SUBTRACT'
@@ -32,6 +32,16 @@ TT_NOT_EQUALS = 'NOT_EQUALS'
 
 TT_LPAREN = 'LPAREN'
 TT_RPAREN = 'RPAREN'
+
+# Function Constants
+
+FUNCTION_POP = '_pop'
+FUNCTION_PUSH = '_push'
+FUNCTION_REPLACE = '_replace'
+FUNCTION_SUBARR = '_subarr'
+FUNCTION_PRINTSTR = '_printstr'
+FUNCTION_ARRAYOF = '_arrayof'
+FUNCTION_GETLENGTH = '_getlength'
 
 # Error
 
@@ -71,9 +81,7 @@ class Token:
         # if token has value, return with value
         # else return type only
         if self.value != None:
-            if self.type == TT_ARRAY:
-                return '[' + ', '.join(map(str, self.value)) + ']'
-            return str(self.type) + ': ' + str(self.value)
+            return str(self.value)
         return str(self.type)
 
 # Operation
@@ -201,20 +209,12 @@ class Operation:
                     if self.args[0].value != self.args[1].value:
                         return Token(TT_BOOL, 'TRUE'), None
                     return Token(TT_BOOL, 'FALSE'), None
-        elif self.operator.type == TT_ARRAY_APPEND:
-            if len(self.args) == 2:
-                if self.args[0].type == TT_ARRAY:
-                    return Token(TT_ARRAY, self.args[0].value + [self.args[1]]), None
         elif self.operator.type == TT_ARRAY_ACCESS:
             if len(self.args) == 2:
                 if self.args[0].type == TT_ARRAY and self.args[1].type == TT_INT:
                     if len(self.args[0].value) <= self.args[1].value or self.args[1].value < 0:
                         return None, RuntimeError('Array index out of bounds')
                     return self.args[0].value[self.args[1].value], None
-        elif self.operator.type == TT_ARRAY_GETLENGTH:
-            if len(self.args) == 1:
-                if self.all_of(TT_ARRAY):
-                    return Token(TT_INT, len(self.args[0].value)), None
         return None, RuntimeError('No such operator')
 
     # returns true if token is a number
@@ -246,8 +246,6 @@ class Context:
         self.parent = parent
         self.variable_cache = dict()
         self.function_cache = dict() # name -> (args, src)
-        if parent == None:
-            self.function_cache.update(FUNCTION_CONSTANTS)
 
     def __repr__(self):
         return str([str(self.variable_cache), str(self.function_cache)])
@@ -330,9 +328,16 @@ OPERATORS = {
     TT_LESS_EQUALS,
     TT_EQUALS,
     TT_NOT_EQUALS,
-    TT_ARRAY_APPEND,
-    TT_ARRAY_ACCESS,
-    TT_ARRAY_GETLENGTH
+    TT_ARRAY_ACCESS
 }
 
-FUNCTION_CONSTANTS = {}
+# name -> args
+FUNCTION_CONSTANTS = [
+    FUNCTION_POP,
+    FUNCTION_PUSH,
+    FUNCTION_REPLACE,
+    FUNCTION_SUBARR,
+    FUNCTION_PRINTSTR,
+    FUNCTION_ARRAYOF,
+    FUNCTION_GETLENGTH
+]

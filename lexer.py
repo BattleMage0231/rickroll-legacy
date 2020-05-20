@@ -53,6 +53,23 @@ class Lexer:
                 if op != None:
                     tokens.append(op)
                 continue
+            if self.cur_char == '\'':
+                self.advance()
+                char = self.cur_char
+                if char == '\'':
+                    char = ''
+                    tokens.append(Token(TT_CHAR, char))
+                    self.advance()
+                    continue
+                elif char == '\\':
+                    self.advance()
+                    char = self.cur_char
+                self.advance()
+                if self.cur_char != '\'':
+                    return None, SyntaxError('Unbalanced char quotations')
+                tokens.append(Token(TT_CHAR, char))
+                self.advance()
+                continue
             if self.cur_char == '+':
                 tokens.append(Token(TT_ADD))
             elif self.cur_char == '-':
@@ -79,8 +96,6 @@ class Lexer:
                     return None, IllegalCharError('Unbalanced parenthesis')
             elif self.cur_char == '!':
                 tokens.append(Token(TT_NOT))
-            elif self.cur_char == '$':
-                tokens.append(Token(TT_ARRAY_GETLENGTH))
             elif self.cur_char.isspace():
                 pass
             else:
@@ -172,8 +187,6 @@ class Lexer:
             return Token(TT_EQUALS), None
         if operator == '!=':
             return Token(TT_NOT_EQUALS), None
-        if operator == '#':
-            return Token(TT_ARRAY_APPEND), None
         if operator == ':':
             return Token(TT_ARRAY_ACCESS), None
         return None, RuntimeError('Operator ' + operator + ' not found')

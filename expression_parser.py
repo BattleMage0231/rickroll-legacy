@@ -40,21 +40,15 @@ class Parser:
                 break
             self.advance()
 
-        # do array append and access operation
+        # do array access operation
         reset()
-        error = self.evaluate_for_binary([TT_ARRAY_APPEND, TT_ARRAY_ACCESS])
+        error = self.evaluate_for_binary([TT_ARRAY_ACCESS])
         if error != None:
             return None, error
 
         # do unary NOT operation
         reset()
         error = self.evaluate_for_unary([TT_NOT], UnaryConstants.CANCEL_OUT)
-        if error != None:
-            return None, error
-
-        # do unary GETLENGTH operation
-        reset()
-        error = self.evaluate_for_unary([TT_ARRAY_GETLENGTH], UnaryConstants.ERROR)
         if error != None:
             return None, error
 
@@ -197,7 +191,7 @@ class Parser:
     # returns true if token is data type
     def is_data_type(self, token):
         return token.type == TT_INT or token.type == TT_FLOAT or token.type == TT_BOOL\
-        or token.type == TT_UNDEFINED or token.type == TT_ARRAY
+        or token.type == TT_UNDEFINED or token.type == TT_ARRAY or token.type == TT_CHAR\
     
     # performs and returns result of binary operation
     def eval_binary(self, left, operation, right):

@@ -92,7 +92,7 @@ class Interpreter:
                     if error != None:
                         print(error.as_string())
                     else:
-                        print(res.value)
+                        print(res)
                 elif re.match(DECLARE, line):
                     name = line[16 : -5] # variable name
                     # add variable to current context
@@ -181,7 +181,7 @@ class Interpreter:
                 elif re.match(CALL, line):
                     value = line[16 : ]
                     index = value.find(' ')
-                    name = value[ : index]
+                    name = value[ : index].strip()
                     index = value.find('desert')
                     args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
                     res, error = self.exec(name, args)
@@ -193,7 +193,7 @@ class Interpreter:
                     return_var = value[ : index - 1]
                     value = value[index + 17 : ]
                     index = value.find(' ')
-                    name = value[ : index]
+                    name = value[ : index].strip()
                     index = value.find('desert')
                     args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
                     res, error = self.exec(name, args)
@@ -230,6 +230,8 @@ class Interpreter:
     def exec(self, function, args):
         if args[0] == 'you':
             args = []
+        if function in FUNCTION_CONSTANTS:
+            return self.exec_builtin(function, args)
         func_args, src, error = self.cur_context.get_function(function)
         if error != None:
             return None, error 
@@ -249,3 +251,79 @@ class Interpreter:
             return res, None 
         else:
             return None, SyntaxError('Too many or too little arguments')
+
+    def exec_builtin(self, function, args):
+        for i in range(len(args)):
+            res, error = self.evaluate(args[i])
+            if error != None:
+                return None, error
+            args[i] = res
+        if function == FUNCTION_POP:
+            if len(args) == 2:
+                if args[0].type == TT_ARRAY and args[1].type == TT_INT:
+                    if len(args[0].value) > args[1].value and args[1].value >= 0:
+                        tmp_arr = args[0].value[:]
+                        tmp_arr.pop(args[1].value)
+                        return Token(TT_ARRAY, tmp_arr), None
+                    else:
+                        return None, RuntimeError('Array index out of bounds')
+                else:
+                    return None, IllegalArgumentError('Unsupported argument types')
+            else:
+                return None, SyntaxError('Too many or too little arguments')
+        elif function == FUNCTION_PUSH:
+            if len(args) == 2:
+                if args[0].type == TT_ARRAY:
+                    tmp_arr = args[0].value[:]
+                    tmp_arr.append(args[1])
+                    return Token(TT_ARRAY, tmp_arr), None
+                else:
+                    return None, IllegalArgumentError('Unsupported argument types')
+            else:
+                return None, SyntaxError('Too many or too little arguments')
+        elif function == FUNCTION_REPLACE:
+            if len(args) == 3:
+                if args[0].type == TT_ARRAY and args[1].type == TT_INT:
+                    if len(args[0].value) > args[1].value and args[1].value >= 0:
+                        tmp_arr = args[0].value[:]
+                        tmp_arr[args[1].value] = args[2]
+                        return Token(TT_ARRAY, tmp_arr), None
+                    else:
+                        return None, RuntimeError('Array index out of bounds')
+                else:
+                    return None, IllegalArgumentError('Unsupported argument types')
+            else:
+                return None, SyntaxError('Too many or too little arguments')
+        elif function == FUNCTION_SUBARR:
+            if len(args) == 3:
+                if args[0].type == TT_ARRAY and args[1].type == TT_INT and args[2].type == TT_INT:
+                    if len(args[0].value) > args[1].value and len(args[0].value) >= args[2].value\
+                    and args[1].value >= 0 and args[2].value >= 0 and args[1].value <= args[2].value:
+                        tmp_arr = args[0].value[args[1].value : args[2].value]
+                        return Token(TT_ARRAY, tmp_arr), None
+                    else:
+                        return None, RuntimeError('Array index out of bounds')
+                else:
+                    return None, IllegalArgumentError('Unsupported argument types')
+            else:
+                return None, SyntaxError('Too many or too little arguments')
+        elif function == FUNCTION_PRINTSTR:
+            if len(args) == 2:
+                if args[0].type == TT_ARRAY and args[1].type == TT_CHAR:
+                    tmp_arr = args[0].value[:]
+                    print(args[1].value.join(map(str, tmp_arr)))
+                    return CONSTANTS['UNDEFINED'], None
+                else:
+                    return None, IllegalArgumentError('Unsupported argument types')
+            else:
+                return None, SyntaxError('Too many or too little arguments')
+        elif function == FUNCTION_ARRAYOF:
+            return Token(TT_ARRAY, [arg for arg in args]), None
+        elif function == FUNCTION_GETLENGTH:
+            if len(args) == 1:
+                if args[0].type == TT_ARRAY:
+                    return Token(TT_INT, len(args[0].value)), None
+                else:
+                    return None, IllegalArgumentError('Unsupported argument types')
+            else:
+                return None, SyntaxError('Too many or too little arguments')
