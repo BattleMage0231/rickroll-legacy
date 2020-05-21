@@ -28,8 +28,9 @@ CALL = 'Never gonna run .+ and desert .+'
 CALL_VALUE = '\(Ooh give you \w+\) Never gonna run \w+ and desert .+'
 
 class Interpreter: 
-    def __init__(self, text=None):
+    def __init__(self, text=None, is_main=True):
         self.text = text.split('\n') if text else []
+        self.is_main = is_main
 
     def append(self, line):
         self.text.append(line)
@@ -72,7 +73,8 @@ class Interpreter:
                 pos += 1 # arguments are on next line
                 # if arguments are missing
                 if pos == len(self.text) or not re.match(ARGUMENT_NAMES, self.text[pos].strip()):
-                    print(SyntaxError('Unexpected EOF (no parameters provided)').as_string())
+                    return None, SyntaxError('Unexpected EOF (no parameters provided)', pos)
+                    function_info = (name, [], [])
                 else:
                     # get arguments delimited by space
                     args = [arg.strip() for arg in self.text[pos].strip()[14 : -1].split(' ') if arg.strip()]
@@ -99,7 +101,7 @@ class Interpreter:
                     # evaluate expression and print
                     res, error = self.evaluate(expr)
                     if error != None:
-                        print(error.as_string())
+                        return None, Traceback(pos, error)
                     else:
                         print(res)
                 elif re.match(DECLARE, line):
@@ -107,29 +109,29 @@ class Interpreter:
                     # add variable to current context
                     error = self.cur_context.add_var(name, CONSTANTS['UNDEFINED'])
                     if error != None:
-                        print(error.as_string())
+                        return None, Traceback(pos, error)
                 elif re.match(ASSIGN, line):
                     value = line[17 : ] # get arguments as raw text
                     index = value.find(' ') # variable names cannot have spaces
                     # if no space found
                     if index == -1:
-                        print(IllegalArgumentError(value).as_string())
+                        return None, IllegalArgumentError(value, pos)
                     else:
                         name = value[ : index] # everything before space is name
                         expr = value[index : ] # everything after is expression
                         value, error = self.evaluate(expr)
                         if error != None:
-                            print(error.as_string())
+                            return None, Traceback(pos, error)
                         else:
                             # set variable
                             error = self.cur_context.set_var(name, value)
                             if error != None:
-                                print(error.as_string())
+                                return None, Traceback(pos, error)
                 elif re.match(CHECK_TRUE, line):
                     expr = line[20 : ] # get boolean expression
                     res, error = self.evaluate(expr)
                     if error != None:
-                        print(error.as_string())
+                        return None, Traceback(pos, error)
                     else:
                         # check if result is a boolean
                         if res.type == TT_BOOL:
@@ -156,18 +158,18 @@ class Interpreter:
                                 # if position is end of file and balance is not 0
                                 # then the loop is not balanced
                                 if loop_balance != 0 and pos == len(self.text):
-                                    print(RuntimeError('Unexpected EOF').as_string())
+                                    return None, RuntimeError('Unexpected EOF', pos)
                                 else:
                                     # position was already incremented to the next
                                     # during the while loop so no need for pos += 1
                                     continue
                         else:
                             # if result is not a boolean
-                            print(IllegalArgumentError('Boolean expected').as_string())
+                            return None, IllegalArgumentError('Boolean expected', pos)
                 elif re.match(IF_END, line):
                     # if loop stack is empty
                     if not loop_stack:
-                        print(RuntimeError('Unexpected statement end').as_string())
+                        return None, RuntimeError('Unexpected statement end', pos)
                     else:
                         # if statement end, simply pop
                         loop_stack.pop()
@@ -175,7 +177,7 @@ class Interpreter:
                 elif re.match(WHILE_END, line):
                     # if loop stack is empty
                     if not loop_stack:
-                        print(RuntimeError('Unexpected statement end').as_string())
+                        return None, RuntimeError('Unexpected statement end', pos)
                     else:
                         # reset position to the original position - 1
                         # pos gets incremented at the end of this loop
@@ -185,10 +187,10 @@ class Interpreter:
                     # get return value
                     return_val, error = self.evaluate(line[51 : -1])
                     if error != None:
-                        print(error.as_string())
+                        return None, Traceback(pos, error)
                     else:
                         # prematurely return
-                        return return_val
+                        return return_val, None
                 elif re.match(CALL, line):
                     value = line[16 : ]
                     index = value.find(' ')
@@ -199,7 +201,7 @@ class Interpreter:
                     args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
                     res, error = self.exec(name, args)
                     if error != None:
-                        print(error.as_string())
+                        return None, Traceback(pos, error)
                 elif re.match(CALL_VALUE, line):
                     value = line[14 : ]
                     index = value.find(' ')
@@ -213,12 +215,12 @@ class Interpreter:
                     args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
                     res, error = self.exec(name, args)
                     if error != None:
-                        print(error.as_string())
+                        return None, Traceback(pos, error)
                     else:
                         # assign value to return)var
                         error = self.cur_context.set_var(return_var, res)
                         if error != None:
-                            print(error.as_string())
+                            return None, Traceback(pos, error)
                 else:
                     print('Other!')
             else:
@@ -226,7 +228,8 @@ class Interpreter:
             pos += 1
         # if loop stack has not been closed
         if loop_stack:
-            print(RuntimeError('Unexpected EOF').as_string())
+            return None, RuntimeError('Unexpected EOF', pos)
+        return None, None
 
     # evaluates an expression using expression_parser and lexer
     def evaluate(self, text, context=None):
@@ -272,8 +275,8 @@ class Interpreter:
             # add undefined return value in case no return statement at the end
             tmp_interpreter.append('(Ooh) Never gonna give, never gonna give (give you UNDEFINED)')
             # execute with global context so runtime has access to variables and functions
-            res = tmp_interpreter.execute(self.global_context)
-            return res, None 
+            res, error = tmp_interpreter.execute(self.global_context)
+            return res, error
         else:
             return None, SyntaxError('Too many or too little arguments')
 

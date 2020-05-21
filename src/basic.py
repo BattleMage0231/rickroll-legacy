@@ -47,29 +47,40 @@ FUNCTION_INPUT = '_input'
 # Error
 
 class Error:
-    def __init__(self, name, details):
+    def __init__(self, name, details, line=None, child=None):
         self.name = name
         self.details = details
+        self.line = line
+        self.child = child
 
     def as_string(self):
-        result = str(self.name) + ': ' + str(self.details)
-        return result
+        if self.line == None:
+            if self.child == None:
+                return str(self.name) + ': ' + str(self.details)
+            return str(self.name) + ': ' + str(self.details) + '\n' + self.child.as_string()
+        if self.child == None:
+            return str(self.name) + ' on line ' + str(self.line) + ': ' + str(self.details)
+        return str(self.name) + ' on line ' + str(self.line) + ': ' + str(self.details) + '\n' + self.child.as_string()
 
 class IllegalCharError(Error):
-    def __init__(self, details):
-        super().__init__('Illegal Character', details)
+    def __init__(self, details, line=None, child=None):
+        super().__init__('Illegal Character', details, line, child)
 
 class RuntimeError(Error):
-    def __init__(self, details):
-        super().__init__('Runtime Error', details)
+    def __init__(self, details, line=None, child=None):
+        super().__init__('Runtime Error', details, line, child)
 
 class IllegalArgumentError(Error):
-    def __init__(self, details):
-        super().__init__('Illegal Argument', details)
+    def __init__(self, details, line=None, child=None):
+        super().__init__('Illegal Argument', details, line, child)
 
 class SyntaxError(Error):
-    def __init__(self, details):
-        super().__init__('Syntax Error', details)
+    def __init__(self, details, line=None, child=None):
+        super().__init__('Syntax Error', details, line, child)
+
+class Traceback(Error):
+    def __init__(self, line=None, child=None):
+        super().__init__('Traceback', '', line, child)
 
 # Token
 
