@@ -87,3 +87,11 @@ The new command deletes everything saved in the editor and makes a new file.
 ```
 rickroll > new
 ```
+
+## Run
+
+The run command executes the saved code using the rickroll interpreter.
+
+```
+rickroll > run
+```
