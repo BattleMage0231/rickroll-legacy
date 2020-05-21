@@ -50,9 +50,12 @@ if len(sys.argv) < 2:
             if text == 'edit':
                 in_editor = True
             elif text == 'run':
-                code, error = inter.execute(basic.Context(None))
-                if error != None:
-                    print(error.as_string())
+                try:
+                    code, error = inter.execute(basic.Context(None))
+                    if error != None:
+                        print(in_color(error.as_string(), COLOR_RED))
+                except:
+                    print(in_color('A fatal error has occured', COLOR_RED))
             elif re.match('^delete \d+$', text):
                 index = int(text[7 : ])
                 # if index in bounds
@@ -96,8 +99,11 @@ else:
         with open(file_name, 'r') as f:
             src = f.read()
             inter = interpreter.Interpreter(src)
-            code, error = inter.execute(basic.Context(None))
-            if error != None:
-                print(error.as_string())
+            try:
+                code, error = inter.execute(basic.Context(None))
+                if error != None:
+                    print(in_color(error.as_string(), COLOR_RED))
+            except:
+                print(in_color('A fatal error has occured', COLOR_RED))
     else:
-        print('The file does not exist')
+        print(in_color('The file does not exist', COLOR_RED))
