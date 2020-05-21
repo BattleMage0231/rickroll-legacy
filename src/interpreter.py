@@ -54,6 +54,7 @@ class Interpreter:
         cur_block = None
         function_info = None
         loop_stack = [] # stores lines of loop declarations
+        loop_balance = 0
         pos = 0
         while pos < len(self.text):
             line = self.text[pos].strip()
@@ -67,7 +68,10 @@ class Interpreter:
                 # if there was a previous verse, store it
                 if cur_block == TT_VERSE:
                     # tuple of (name, args, src)
+                    if loop_balance != 0:
+                        return None, RuntimeError('Unexpected function end', pos)
                     self.cur_context.add_function(function_info[0], function_info[1], function_info[2])
+                loop_balance = 0
                 cur_block = TT_VERSE
                 name = line[7 : -1] # name of function
                 pos += 1 # arguments are on next line
@@ -87,10 +91,19 @@ class Interpreter:
                 # line is starting point of chorus block
                 # if there was a previous verse, store it
                 if cur_block == TT_VERSE:
+                    if loop_balance != 0:
+                        return None, RuntimeError('Unexpected function end', pos)
                     self.cur_context.add_function(function_info[0], function_info[1], function_info[2])
+                loop_balance = 0
                 cur_block = TT_CHORUS
                 self.cur_context = Context(self.cur_context) # new local context
             elif cur_block == TT_VERSE:
+                if re.match(CHECK_TRUE, line):
+                    loop_balance += 1
+                elif re.match(IF_END, line) or re.match(WHILE_END, line):
+                    loop_balance -= 1
+                if loop_balance < 0:
+                    return None, RuntimeError('Unexpected function end', pos)
                 function_info[2].append(line) # do not execute immediately since part of block
             elif cur_block == TT_INTRO or cur_block == TT_CHORUS:
                 if re.match(SAY, line):
