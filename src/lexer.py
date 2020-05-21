@@ -167,6 +167,11 @@ class Lexer:
         while cur_context != None:
             # if variable exists in this context, return it
             if name in cur_context.variable_cache:
+                if self.unary_minus:
+                    self.unary_minus = False
+                    if not cur_context.variable_cache[name].type in [TT_INT, TT_FLOAT]:
+                        return None, RuntimeError('Expected INT or FLOAT')
+                    return Token(cur_context.variable_cache[name].type, -cur_context.variable_cache[name].value), None
                 return cur_context.variable_cache[name], None
             cur_context = cur_context.parent
         # otherwise variable was not found
