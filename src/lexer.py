@@ -1,7 +1,7 @@
 import re
 from basic import *
 
-SPECIAL_CHARACTERS = '&|<>=!:#'
+SPECIAL_CHARACTERS = '&|<>=:#'
 
 class Lexer:
     def __init__(self, text, context):
