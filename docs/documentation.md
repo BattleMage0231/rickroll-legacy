@@ -313,7 +313,7 @@ The putchar function, callable by ```_putchar```, puts one character into stdout
 
 ```
 Never gonna run putchar and desert 'L'
-Never gonna run putchar and desrer '\n'
+Never gonna run putchar and desert '\n'
 ```
 
 ```
