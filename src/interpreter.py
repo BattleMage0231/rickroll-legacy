@@ -51,6 +51,7 @@ class Interpreter:
         # set local global context and current context
         self.global_context = context
         self.cur_context = self.global_context
+        no_intro = False
         cur_block = None
         function_info = None
         loop_stack = [] # stores lines of loop declarations
@@ -61,9 +62,13 @@ class Interpreter:
             if line == '':
                 pass
             elif re.match(INTRO, line):
+                if no_intro:
+                    return None, SyntaxError('[Intro] block already found', pos)
+                no_intro = True
                 # line is starting point of intro block
                 cur_block = TT_INTRO
             elif re.match(VERSE, line):
+                no_intro = True
                 # line is starting point of verse block
                 # if there was a previous verse, store it
                 if cur_block == TT_VERSE:
@@ -88,6 +93,7 @@ class Interpreter:
                     # store function info
                     function_info = (name, args, [])
             elif re.match(CHORUS, line):
+                no_intro = True
                 # line is starting point of chorus block
                 # if there was a previous verse, store it
                 if cur_block == TT_VERSE:
