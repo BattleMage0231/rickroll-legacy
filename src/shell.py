@@ -3,6 +3,7 @@ import interpreter
 import re
 import os
 import sys
+import traceback
 
 os.system("cls") # windows workaround to fix color formatting bug
 
@@ -54,9 +55,11 @@ if len(sys.argv) < 2:
                     code, error = inter.execute(basic.Context(None))
                     if error != None:
                         print(in_color(error.as_string(), COLOR_RED))
-                except BaseException as error:
+                except KeyboardInterrupt:
+                    print(in_color('The program execution has been interrupted', COLOR_RED))
+                except BaseException:
                     print(in_color('An internal exception has occured', COLOR_RED))
-                    print(error)
+                    print(traceback.format_exc())
             elif re.match('^delete \d+$', text):
                 index = int(text[7 : ])
                 # if index in bounds
@@ -104,8 +107,10 @@ else:
                 code, error = inter.execute(basic.Context(None))
                 if error != None:
                     print(in_color(error.as_string(), COLOR_RED))
-            except BaseException as error:
+            except KeyboardInterrupt:
+                print(in_color('The program execution has been interrupted', COLOR_RED))
+            except BaseException:
                 print(in_color('An internal exception has occured', COLOR_RED))
-                print(error)
+                print(traceback.format_exc())
     else:
         print(in_color('The file does not exist', COLOR_RED))
