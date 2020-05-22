@@ -54,8 +54,9 @@ if len(sys.argv) < 2:
                     code, error = inter.execute(basic.Context(None))
                     if error != None:
                         print(in_color(error.as_string(), COLOR_RED))
-                except:
-                    print(in_color('A fatal error has occured', COLOR_RED))
+                except BaseException as error:
+                    print(in_color('An internal exception has occured', COLOR_RED))
+                    print(error)
             elif re.match('^delete \d+$', text):
                 index = int(text[7 : ])
                 # if index in bounds
@@ -103,7 +104,8 @@ else:
                 code, error = inter.execute(basic.Context(None))
                 if error != None:
                     print(in_color(error.as_string(), COLOR_RED))
-            except:
-                print(in_color('A fatal error has occured', COLOR_RED))
+            except BaseException as error:
+                print(in_color('An internal exception has occured', COLOR_RED))
+                print(error)
     else:
         print(in_color('The file does not exist', COLOR_RED))
