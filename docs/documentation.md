@@ -4,34 +4,34 @@
 
 Currently, rickroll supports the following data types.
 
-| Data Type   |      Stores      |
-|----------|:-------------:|
-| INT |  an arbitrary precision integer|
-| FLOAT |    an arbitrary precision floating point   |
-| BOOL | TRUE or FALSE | 
-| CHAR | a character | 
-| ARRAY | a list of data types (ARRAY is a constant for an empty array) | 
+| Data Type   | Stores                                                        |
+|-------------|:-------------------------------------------------------------:|
+| INT         | an arbitrary precision integer                                |
+| FLOAT       | an arbitrary precision floating point                         |
+| BOOL        | TRUE or FALSE                                                 | 
+| CHAR        | a character                                                   | 
+| ARRAY       | a list of data types (ARRAY is a constant for an empty array) | 
 
 Operators can be used to perform operations on data types. The following operators are supported and evaluated in order.
 
-| Operator   |      Action      |  Precedence |
-|----------|:-------------:|:-------------:|
-| - |  unary minus | 0 |
-| : |  array access | 1 |
-| ! |  boolean not | 2 |
-| * |  multiplication |  3 |
-| / |  division (integer division if both arguments are integers) |  3 |
-| % |  modulo |  3 |
-| + |  addition |  4 |
-| - |  subtraction |  4 |
-| > |  greater than|  5 |
-| < |  less than |  5 |
-| >= |  greater than or equals |  5 |
-| <= |  less than or equals |  5 |
-| == |  equals |  5 |
-| != |  not equals |  5 |
-| && |  boolean AND |  6 |
-| \|\| |  boolean OR |  6 |
+| Operator | Action                                                      | Precedence    |
+|----------|:-----------------------------------------------------------:|:-------------:|
+| -        |  unary minus                                                | 0             |
+| :        |  array access                                               | 1             |
+| !        |  boolean not                                                | 2             |
+| *        |  multiplication                                             | 3             |
+| /        |  division (integer division if both arguments are integers) | 3             |
+| %        |  modulo                                                     | 3             |
+| +        |  addition                                                   | 4             |
+| -        |  subtraction                                                | 4             |
+| >        |  greater than                                               | 5             |
+| <        |  less than                                                  | 5             |
+| >=       |  greater than or equals                                     | 5             |
+| <=       |  less than or equals                                        | 5             |
+| ==       |  equals                                                     | 5             |
+| !=       |  not equals                                                 | 5             |
+| &&       |  boolean AND                                                | 6             |
+| \|\|     |  boolean OR                                                 | 6             |
 
 Expressions are formed by combining data types and operators. Expressions may also contain parenthesis for evaluation priority. For example, ```3 + 4 * (6 % 3) > 1``` is a valid expression. It returns ```TRUE```.
 
@@ -330,9 +330,8 @@ Never gonna let arr down
 Never gonna say arr
 ```
 
-stdin:
 ```
-Hello!
+stdin: Hello!
 ```
 
 ```
