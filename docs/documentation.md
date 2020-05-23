@@ -87,9 +87,24 @@ Never gonna say b
 FALSE
 ```
 
+## Casting
+
+Variables may be casted from one type to the other. To cast variables, use the syntax ```Never gonna make VAR TYPE```, where ```VAR``` is the name of the variable and ```TYPE``` is the type to cast to, one of the data types listed in the table above.
+
+```
+Never gonna let a down
+Never gonna give 2 + 5 * 1
+Never gonna make a FLOAT
+Never gonna say a
+```
+
+```
+7.0
+```
+
 ## While Loops and If Statements
 
-Both while loops and if statements start with a statement that checks the value of a boolean. If the value is FALSE, the interpreter skips to the end of the statement.
+Both while loops and if statements start with a statement that checks the value of a boolean. If the value is FALSE, the interpreter skips to the end of the statement. If the value provided is not a boolean, the interpreter will try to cast it to a boolean.
 
 The syntax to check the boolean is ```Inside we both know EXPR```, where ```EXPR``` is an expression returning a boolean.
 
