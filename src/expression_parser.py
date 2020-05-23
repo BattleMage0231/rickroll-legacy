@@ -326,8 +326,7 @@ class Parser:
 
     # returns true if token is data type
     def is_data_type(self, token):
-        return token.type == TT_INT or token.type == TT_FLOAT or token.type == TT_BOOL\
-        or token.type == TT_UNDEFINED or token.type == TT_ARRAY or token.type == TT_CHAR\
+        return token.type in DATA_TYPES
     
     # performs and returns result of binary operation
     def eval_binary(self, left, operation, right):
