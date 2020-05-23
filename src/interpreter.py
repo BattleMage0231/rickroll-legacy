@@ -4,6 +4,9 @@ from basic import *
 from lexer import *
 from expression_parser import *
 
+# TODO add custom handling for functions and move array methods from interpreter to shell
+# interpreter should only be for execution
+
 # blocks
 VERSE = '^\[Verse \w+\]$'
 CHORUS = '^\[Chorus\]$'
@@ -21,6 +24,8 @@ ASSIGN = '^Never gonna give \w+ .+$'
 CHECK_TRUE = '^Inside we both know .+$'
 WHILE_END = '^We know the game and we\'re gonna play it$'
 IF_END = '^Your heart\'s been aching but you\'re too shy to say it$'
+
+CAST = '^Never gonna make \w+ \w+$'
 
 ARGUMENT_NAMES = '\(Ooh give you .+\)'
 RETURN = '^\(Ooh\) Never gonna give, never gonna give \(give you .+\)$'
@@ -120,7 +125,7 @@ class Interpreter:
                     # evaluate expression and print
                     res, error = self.evaluate(expr)
                     if error != None:
-                        return None, Traceback(pos, error)
+                        return None, Traceback(pos + 1, error)
                     else:
                         print(res)
                 elif re.match(DECLARE, line):
@@ -128,7 +133,7 @@ class Interpreter:
                     # add variable to current context
                     error = self.cur_context.add_var(name, CONSTANTS['UNDEFINED'])
                     if error != None:
-                        return None, Traceback(pos, error)
+                        return None, Traceback(pos + 1, error)
                 elif re.match(ASSIGN, line):
                     value = line[17 : ] # get arguments as raw text
                     index = value.find(' ') # variable names cannot have spaces
@@ -140,51 +145,50 @@ class Interpreter:
                         expr = value[index : ] # everything after is expression
                         value, error = self.evaluate(expr)
                         if error != None:
-                            return None, Traceback(pos, error)
+                            return None, Traceback(pos + 1, error)
                         else:
                             # set variable
                             error = self.cur_context.set_var(name, value)
                             if error != None:
-                                return None, Traceback(pos, error)
+                                return None, Traceback(pos + 1, error)
                 elif re.match(CHECK_TRUE, line):
                     expr = line[20 : ] # get boolean expression
                     res, error = self.evaluate(expr)
                     if error != None:
-                        return None, Traceback(pos, error)
+                        return None, Traceback(pos + 1, error)
                     else:
-                        # check if result is a boolean
-                        if res.type == TT_BOOL:
-                            # if true, execute the inside
-                            if res.value == 'TRUE':
-                                loop_stack.append(pos)
-                                self.cur_context = Context(self.cur_context) # make new context
-                            else:
-                                # else skip to the end
-                                pos += 1
-                                loop_balance = 1 # start with current CHECK_TRUE statement
-                                # while pos is not end of program and loop is not balanced
-                                while pos < len(self.text) and loop_balance != 0:
-                                    # new CHECK_TRUE statement
-                                    if re.match(CHECK_TRUE, self.text[pos].strip()):
-                                        loop_balance += 1
-                                    elif re.match(IF_END, self.text[pos].strip()) or re.match(WHILE_END, self.text[pos].strip()):
-                                        # new closing statement
-                                        loop_balance -= 1
-                                    # error, loop not balanced
-                                    if loop_balance < 0:
-                                        break
-                                    pos += 1
-                                # if position is end of file and balance is not 0
-                                # then the loop is not balanced
-                                if loop_balance != 0 and pos == len(self.text):
-                                    return None, RuntimeError('Unexpected EOF', pos)
-                                else:
-                                    # position was already incremented to the next
-                                    # during the while loop so no need for pos += 1
-                                    continue
+                        if res.type != TT_BOOL:
+                            res, error = self.cast(res, TT_BOOL)
+                            if error != None:
+                                return None, IllegalArgumentError('Boolean expected', pos)
+                        # if true, execute the inside
+                        if res.value == 'TRUE':
+                            loop_stack.append(pos)
+                            self.cur_context = Context(self.cur_context) # make new context
                         else:
-                            # if result is not a boolean
-                            return None, IllegalArgumentError('Boolean expected', pos)
+                            # else skip to the end
+                            pos += 1
+                            loop_balance = 1 # start with current CHECK_TRUE statement
+                            # while pos is not end of program and loop is not balanced
+                            while pos < len(self.text) and loop_balance != 0:
+                                # new CHECK_TRUE statement
+                                if re.match(CHECK_TRUE, self.text[pos].strip()):
+                                    loop_balance += 1
+                                elif re.match(IF_END, self.text[pos].strip()) or re.match(WHILE_END, self.text[pos].strip()):
+                                    # new closing statement
+                                    loop_balance -= 1
+                                # error, loop not balanced
+                                if loop_balance < 0:
+                                    break
+                                pos += 1
+                            # if position is end of file and balance is not 0
+                            # then the loop is not balanced
+                            if loop_balance != 0 and pos == len(self.text):
+                                return None, RuntimeError('Unexpected EOF', pos)
+                            else:
+                                # position was already incremented to the next
+                                # during the while loop so no need for pos += 1
+                                continue
                 elif re.match(IF_END, line):
                     # if loop stack is empty
                     if not loop_stack:
@@ -206,7 +210,7 @@ class Interpreter:
                     # get return value
                     return_val, error = self.evaluate(line[51 : -1])
                     if error != None:
-                        return None, Traceback(pos, error)
+                        return None, Traceback(pos + 1, error)
                     else:
                         # prematurely return
                         return return_val, None
@@ -220,7 +224,7 @@ class Interpreter:
                     args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
                     res, error = self.exec(name, args)
                     if error != None:
-                        return None, Traceback(pos, error)
+                        return None, Traceback(pos + 1, error)
                 elif re.match(CALL_VALUE, line):
                     value = line[14 : ]
                     index = value.find(' ')
@@ -234,12 +238,24 @@ class Interpreter:
                     args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
                     res, error = self.exec(name, args)
                     if error != None:
-                        return None, Traceback(pos, error)
+                        return None, Traceback(pos + 1, error)
                     else:
                         # assign value to return)var
                         error = self.cur_context.set_var(return_var, res)
                         if error != None:
-                            return None, Traceback(pos, error)
+                            return None, Traceback(pos + 1, error)
+                elif re.match(CAST, line):
+                    value = line[17 : ]
+                    index = value.find(' ')
+                    name = value[ : index]
+                    to_type = value[index + 1 : ]
+                    var, error = self.cur_context.get_var(name)
+                    if error != None:
+                        return None, Traceback(pos + 1, error)
+                    res, error = self.cast(var, to_type)
+                    if error != None:
+                        return None, Traceback(pos + 1, error)
+                    self.cur_context.set_var(name, res)
                 else:
                     print('Other!')
             else:
@@ -395,3 +411,51 @@ class Interpreter:
                 return Token(TT_ARRAY, char_arr), None
             else:
                 return None, SyntaxError('Too many or too little arguments')
+
+    def cast(self, token, new_type):
+        if token.type == new_type:
+            return token, None
+        # casting to INT
+        if new_type == TT_INT:
+            if token.type == TT_FLOAT:
+                return Token(TT_INT, int(token.value)), None
+            if token.type == TT_BOOL:
+                return Token(TT_INT, 1 if token.value == 'TRUE' else 0), None
+            if token.type == TT_CHAR:
+                return Token(TT_INT, ord(token.value)), None
+        elif new_type == TT_FLOAT:
+            # casting to FLOAT
+            if token.type == TT_INT:
+                return Token(TT_FLOAT, float(token.value)), None
+            if token.type == TT_BOOL:
+                return Token(TT_FLOAT, 1.0 if token.value == 'TRUE' else 0.0), None
+            if token.type == TT_CHAR:
+                return Token(TT_FLOAT, float(ord(token.value))), None
+        elif new_type == TT_BOOL:
+            # casting to BOOL
+            if token.type == TT_INT:
+                return CONSTANTS['FALSE'] if token.value == 0 else CONSTANTS['TRUE'], None
+            if token.type == TT_FLOAT:
+                return CONSTANTS['FALSE'] if token.value == 0.0 else CONSTANTS['TRUE'], None
+            if token.type == TT_ARRAY:
+                return CONSTANTS['FALSE'] if not token.value else CONSTANTS['TRUE'], None
+            if token.type == TT_UNDEFINED:
+                return CONSTANTS['FALSE']
+        elif new_type == TT_ARRAY:
+            # casting to ARRAY
+            pass
+        elif new_type == TT_CHAR:
+            # casting to CHAR
+            try:
+                if token.type == TT_INT:
+                    return Token(TT_CHAR, chr(token.value)), None
+                if token.type == TT_FLOAT:
+                    return Token(TT_CHAR, chr(int(token.value))), None
+            except:
+                return None, IllegalCastError('Not a valid ASCII value')
+        elif new_type == TT_UNDEFINED:
+            # casting to undefined
+            pass
+        else:
+            return None, IllegalArgumentError(new_type + ' not a data type')
+        return None, IllegalCastError('Cannot cast ' + token.type + ' to ' + new_type)
