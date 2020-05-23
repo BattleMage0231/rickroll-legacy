@@ -33,24 +33,9 @@ CALL = 'Never gonna run .+ and desert .+'
 CALL_VALUE = '\(Ooh give you \w+\) Never gonna run \w+ and desert .+'
 
 class Interpreter: 
-    def __init__(self, text=None, is_main=True):
-        self.text = text.split('\n') if text else []
+    def __init__(self, text=[], is_main=True):
+        self.text = text
         self.is_main = is_main
-
-    def append(self, line):
-        self.text.append(line)
-
-    # one indexed
-    def pop(self, index):
-        self.text.pop(index - 1)
-
-    # one indexed
-    def insert(self, index, text):
-        self.text.insert(index - 1, text)
-
-    # one indexed
-    def replace(self, index, text):
-        self.text[index - 1] = text
 
     def execute(self, context):
         # set local global context and current context

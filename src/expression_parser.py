@@ -103,8 +103,6 @@ class Parser:
         self.cur_node = self.expression.pos
         self.start_stack = []
 
-    ### TODO handle case where start gets popped
-
     def update(self):
         self.cur_token = self.expression.get_cur_token()
         self.cur_node = self.expression.pos
@@ -149,6 +147,13 @@ class Parser:
                 # will get rid of its own right parenthesis
                 break
             self.advance()
+
+        # do unary minus operation
+        self.reset()
+        error = self.evaluate_for_unary([TT_UNARY_MINUS], UnaryConstants.CANCEL_OUT)
+        if error != None:
+            self.start_stack.pop()
+            return None, error
 
         # do array access operation
         self.reset()

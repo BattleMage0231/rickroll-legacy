@@ -19,6 +19,8 @@ TT_MULTIPLY = 'MULTIPLY'
 TT_DIVIDE = 'DIVIDE'
 TT_MODULO = 'MODULO'
 
+TT_UNARY_MINUS = 'UNARY_MINUS'
+
 TT_AND = 'AND'
 TT_OR = 'OR'
 TT_NOT = 'NOT'
@@ -235,6 +237,11 @@ class Operation:
                         return None, RuntimeError('Array index out of bounds')
                     # return value at index
                     return self.args[0].value[self.args[1].value], None
+        elif self.operator.type == TT_UNARY_MINUS:
+            # if operator is unary
+            if len(self.args) == 1:
+                if self.all_satisfies(self.is_number):
+                    return Token(self.args[0].type, -self.args[0].value), None
         return None, RuntimeError('No such operator')
 
     # returns true if token is a number
@@ -355,7 +362,8 @@ OPERATORS = [
     TT_LESS_EQUALS,
     TT_EQUALS,
     TT_NOT_EQUALS,
-    TT_ARRAY_ACCESS
+    TT_ARRAY_ACCESS,
+    TT_UNARY_MINUS,
 ]
 
 DATA_TYPES = [
