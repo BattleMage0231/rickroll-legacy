@@ -278,22 +278,22 @@ class Interpreter:
         func_args, src, error = self.cur_context.get_function(function)
         if error != None:
             return None, error 
-        tmp_interpreter = Interpreter() # new runtime
-        tmp_interpreter.append('[Chorus]')
+        code = ['[Chorus]']
         # if argument count matches
         if len(args) == len(func_args):
             # create all passed in variables locally at the start
             for i in range(len(args)):
-                tmp_interpreter.append('Never gonna let ' + func_args[i] + ' down')
+                code.append('Never gonna let ' + func_args[i] + ' down')
                 res, error = self.evaluate(args[i]) # evaluate arguments before appending
                 if error != None:
                     return None, error
-                tmp_interpreter.append('Never gonna give ' + func_args[i] + ' ' + str(res.value))
+                code.append('Never gonna give ' + func_args[i] + ' ' + str(res.value))
             # append all function lines
             for line in src:
-                tmp_interpreter.append(line)
+                code.append(line)
             # add undefined return value in case no return statement at the end
-            tmp_interpreter.append('(Ooh) Never gonna give, never gonna give (give you UNDEFINED)')
+            code.append('(Ooh) Never gonna give, never gonna give (give you UNDEFINED)')
+            tmp_interpreter = Interpreter(code)
             # execute with global context so runtime has access to variables and functions
             res, error = tmp_interpreter.execute(self.global_context)
             return res, error
