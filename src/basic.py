@@ -46,6 +46,31 @@ FUNCTION_ARRAYOF = '_arrayof'
 FUNCTION_GETLENGTH = '_getlength'
 FUNCTION_INPUT = '_input'
 
+# blocks
+VERSE = '^\[Verse \w+\]$'
+CHORUS = '^\[Chorus\]$'
+INTRO = '^\[Intro\]$'
+
+TT_INTRO = 'INTRO'
+TT_VERSE = 'VERSE'
+TT_CHORUS = 'CHORUS'
+
+# statements
+SAY = '^Never gonna say .+$'
+DECLARE = '^Never gonna let \w+ down$'
+ASSIGN = '^Never gonna give \w+ .+$'
+
+CHECK_TRUE = '^Inside we both know .+$'
+WHILE_END = '^We know the game and we\'re gonna play it$'
+IF_END = '^Your heart\'s been aching but you\'re too shy to say it$'
+
+CAST = '^Never gonna make \w+ \w+$'
+
+ARGUMENT_NAMES = '\(Ooh give you .+\)'
+RETURN = '^\(Ooh\) Never gonna give, never gonna give \(give you .+\)$'
+CALL = 'Never gonna run .+ and desert .+'
+CALL_VALUE = '\(Ooh give you \w+\) Never gonna run \w+ and desert .+'
+
 # Error
 
 class Error:
@@ -56,13 +81,14 @@ class Error:
         self.child = child
 
     def as_string(self):
-        if self.line == None:
-            if self.child == None:
-                return str(self.name) + ': ' + str(self.details)
-            return str(self.name) + ': ' + str(self.details) + '\n' + self.child.as_string()
-        if self.child == None:
-            return str(self.name) + ' on line ' + str(self.line) + ': ' + str(self.details)
-        return str(self.name) + ' on line ' + str(self.line) + ': ' + str(self.details) + '\n' + self.child.as_string()
+        res = str(self.name)
+        # line could be 0 so can't cast to boolean
+        if self.line != None:
+            res += ' on line ' + str(self.line)
+        res += ': ' + str(self.details)
+        if self.child:
+            res += '\n' + self.child.as_string()
+        return res
 
 class IllegalCharError(Error):
     def __init__(self, details, line=None, child=None):
@@ -96,11 +122,9 @@ class Token:
         self.value = value
     
     def __repr__(self):
-        # if token has value, return with value
-        # else return type only
-        if self.value != None:
-            return str(self.value)
-        return str(self.type)
+        # if token has a value, return it
+        # otherwise return type
+        return str(self.value if self.value != None else self.type)
 
 # Operation
 
@@ -228,6 +252,7 @@ class Operation:
                         return Token(TT_BOOL, 'TRUE'), None
                     return Token(TT_BOOL, 'FALSE'), None
         elif self.operator.type == TT_ARRAY_ACCESS:
+            print('hi')
             # if operator is binary
             if len(self.args) == 2:
                 # if arguments are array and int
@@ -274,6 +299,7 @@ class Context:
         self.variable_cache = dict()
         self.function_cache = dict() # name -> (args, src)
 
+    # for debugging
     def __repr__(self):
         return str([str(self.variable_cache), str(self.function_cache)])
 
