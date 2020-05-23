@@ -103,8 +103,6 @@ class Parser:
         self.cur_node = self.expression.pos
         self.start_stack = []
 
-    ### TODO handle case where start gets popped
-
     def update(self):
         self.cur_token = self.expression.get_cur_token()
         self.cur_node = self.expression.pos
