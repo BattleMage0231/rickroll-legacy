@@ -78,6 +78,10 @@ class SyntaxError(Error):
     def __init__(self, details, line=None, child=None):
         super().__init__('Syntax Error', details, line, child)
 
+class IllegalCastError(Error):
+    def __init__(self, details, line=None, child=None):
+        super().__init__('Illegal Case', details, line, child)
+
 class Traceback(Error):
     def __init__(self, line=None, child=None):
         super().__init__('Traceback', '', line, child)
@@ -336,7 +340,7 @@ CONSTANTS = {
     'ARRAY': Token(TT_ARRAY, [])
 }
 
-OPERATORS = {
+OPERATORS = [
     TT_ADD,
     TT_SUBTRACT,
     TT_MULTIPLY,
@@ -352,7 +356,16 @@ OPERATORS = {
     TT_EQUALS,
     TT_NOT_EQUALS,
     TT_ARRAY_ACCESS
-}
+]
+
+DATA_TYPES = [
+    TT_INT,
+    TT_FLOAT,
+    TT_BOOL,
+    TT_ARRAY,
+    TT_CHAR,
+    TT_UNDEFINED
+]
 
 # stores names of built-in functions
 FUNCTION_CONSTANTS = [
