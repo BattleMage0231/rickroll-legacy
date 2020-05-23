@@ -1,41 +1,15 @@
 import re
 import sys
+
 from basic import *
-from lexer import *
 from expression_parser import *
+from lexer import *
 
-# TODO add custom handling for functions and move array methods from interpreter to shell
-# interpreter should only be for execution
-
-# blocks
-VERSE = '^\[Verse \w+\]$'
-CHORUS = '^\[Chorus\]$'
-INTRO = '^\[Intro\]$'
-
-TT_INTRO = 'INTRO'
-TT_VERSE = 'VERSE'
-TT_CHORUS = 'CHORUS'
-
-# statements
-SAY = '^Never gonna say .+$'
-DECLARE = '^Never gonna let \w+ down$'
-ASSIGN = '^Never gonna give \w+ .+$'
-
-CHECK_TRUE = '^Inside we both know .+$'
-WHILE_END = '^We know the game and we\'re gonna play it$'
-IF_END = '^Your heart\'s been aching but you\'re too shy to say it$'
-
-CAST = '^Never gonna make \w+ \w+$'
-
-ARGUMENT_NAMES = '\(Ooh give you .+\)'
-RETURN = '^\(Ooh\) Never gonna give, never gonna give \(give you .+\)$'
-CALL = 'Never gonna run .+ and desert .+'
-CALL_VALUE = '\(Ooh give you \w+\) Never gonna run \w+ and desert .+'
+# TODO add custom handling for functions
 
 class Interpreter: 
-    def __init__(self, text=[], is_main=True):
+    def __init__(self, text=[]):
         self.text = text
-        self.is_main = is_main
 
     def execute(self, context):
         # set local global context and current context
@@ -49,7 +23,7 @@ class Interpreter:
         pos = 0
         while pos < len(self.text):
             line = self.text[pos].strip()
-            if line == '':
+            if not line:
                 pass
             elif re.match(INTRO, line):
                 if no_intro:
@@ -73,7 +47,6 @@ class Interpreter:
                 # if arguments are missing
                 if pos == len(self.text) or not re.match(ARGUMENT_NAMES, self.text[pos].strip()):
                     return None, SyntaxError('Unexpected EOF (no parameters provided)', pos)
-                    function_info = (name, [], [])
                 else:
                     # get arguments delimited by space
                     args = [arg.strip() for arg in self.text[pos].strip()[14 : -1].split(' ') if arg.strip()]
@@ -109,7 +82,7 @@ class Interpreter:
                         exit()
                     # evaluate expression and print
                     res, error = self.evaluate(expr)
-                    if error != None:
+                    if error:
                         return None, Traceback(pos + 1, error)
                     else:
                         print(res)
@@ -117,7 +90,7 @@ class Interpreter:
                     name = line[16 : -5] # variable name
                     # add variable to current context
                     error = self.cur_context.add_var(name, CONSTANTS['UNDEFINED'])
-                    if error != None:
+                    if error:
                         return None, Traceback(pos + 1, error)
                 elif re.match(ASSIGN, line):
                     value = line[17 : ] # get arguments as raw text
@@ -125,80 +98,74 @@ class Interpreter:
                     # if no space found
                     if index == -1:
                         return None, IllegalArgumentError(value, pos)
-                    else:
-                        name = value[ : index] # everything before space is name
-                        expr = value[index : ] # everything after is expression
-                        value, error = self.evaluate(expr)
-                        if error != None:
-                            return None, Traceback(pos + 1, error)
-                        else:
-                            # set variable
-                            error = self.cur_context.set_var(name, value)
-                            if error != None:
-                                return None, Traceback(pos + 1, error)
+                    name = value[ : index] # everything before space is name
+                    expr = value[index : ] # everything after is expression
+                    value, error = self.evaluate(expr)
+                    if error:
+                        return None, Traceback(pos + 1, error)
+                    # set variable
+                    error = self.cur_context.set_var(name, value)
+                    if error:
+                        return None, Traceback(pos + 1, error)
                 elif re.match(CHECK_TRUE, line):
                     expr = line[20 : ] # get boolean expression
                     res, error = self.evaluate(expr)
-                    if error != None:
+                    if error:
                         return None, Traceback(pos + 1, error)
+                    if res.type != TT_BOOL:
+                        res, error = self.cast(res, TT_BOOL)
+                        if error:
+                            return None, IllegalArgumentError('Boolean expected', pos)
+                    # if true, execute the inside
+                    if res.value == 'TRUE':
+                        loop_stack.append(pos)
+                        self.cur_context = Context(self.cur_context) # make new context
                     else:
-                        if res.type != TT_BOOL:
-                            res, error = self.cast(res, TT_BOOL)
-                            if error != None:
-                                return None, IllegalArgumentError('Boolean expected', pos)
-                        # if true, execute the inside
-                        if res.value == 'TRUE':
-                            loop_stack.append(pos)
-                            self.cur_context = Context(self.cur_context) # make new context
-                        else:
-                            # else skip to the end
+                        # else skip to the end
+                        pos += 1
+                        loop_balance = 1 # start with current CHECK_TRUE statement
+                        # while pos is not end of program and loop is not balanced
+                        while pos < len(self.text) and loop_balance != 0:
+                            # new CHECK_TRUE statement
+                            if re.match(CHECK_TRUE, self.text[pos].strip()):
+                                loop_balance += 1
+                            elif re.match(IF_END, self.text[pos].strip()) or re.match(WHILE_END, self.text[pos].strip()):
+                                # new closing statement
+                                loop_balance -= 1
+                            # error, loop not balanced
+                            if loop_balance < 0:
+                                break
                             pos += 1
-                            loop_balance = 1 # start with current CHECK_TRUE statement
-                            # while pos is not end of program and loop is not balanced
-                            while pos < len(self.text) and loop_balance != 0:
-                                # new CHECK_TRUE statement
-                                if re.match(CHECK_TRUE, self.text[pos].strip()):
-                                    loop_balance += 1
-                                elif re.match(IF_END, self.text[pos].strip()) or re.match(WHILE_END, self.text[pos].strip()):
-                                    # new closing statement
-                                    loop_balance -= 1
-                                # error, loop not balanced
-                                if loop_balance < 0:
-                                    break
-                                pos += 1
-                            # if position is end of file and balance is not 0
-                            # then the loop is not balanced
-                            if loop_balance != 0 and pos == len(self.text):
-                                return None, RuntimeError('Unexpected EOF', pos)
-                            else:
-                                # position was already incremented to the next
-                                # during the while loop so no need for pos += 1
-                                continue
+                        # if position is end of file and balance is not 0
+                        # then the loop is not balanced
+                        if loop_balance != 0 and pos == len(self.text):
+                            return None, RuntimeError('Unexpected EOF', pos)
+                        else:
+                            # position was already incremented to the next
+                            # during the while loop so no need for pos += 1
+                            continue
                 elif re.match(IF_END, line):
                     # if loop stack is empty
                     if not loop_stack:
                         return None, RuntimeError('Unexpected statement end', pos)
-                    else:
-                        # if statement end, simply pop
-                        loop_stack.pop()
-                        self.cur_context = self.cur_context.parent # remove context
+                    # if statement end, simply pop
+                    loop_stack.pop()
+                    self.cur_context = self.cur_context.parent # remove context
                 elif re.match(WHILE_END, line):
                     # if loop stack is empty
                     if not loop_stack:
                         return None, RuntimeError('Unexpected statement end', pos)
-                    else:
-                        # reset position to the original position - 1
-                        # pos gets incremented at the end of this loop
-                        pos = loop_stack.pop() - 1
-                        self.cur_context = self.cur_context.parent # remove context
+                    # reset position to the original position - 1
+                    # pos gets incremented at the end of this loop
+                    pos = loop_stack.pop() - 1
+                    self.cur_context = self.cur_context.parent # remove context
                 elif re.match(RETURN, line):
                     # get return value
                     return_val, error = self.evaluate(line[51 : -1])
-                    if error != None:
+                    if error:
                         return None, Traceback(pos + 1, error)
-                    else:
-                        # prematurely return
-                        return return_val, None
+                    # prematurely return
+                    return return_val, None
                 elif re.match(CALL, line):
                     value = line[16 : ]
                     index = value.find(' ')
@@ -206,9 +173,9 @@ class Interpreter:
                     index = value.find('desert') # get first index of 'desert' as reference
                     # get arguments trimmed and delimited by ', '
                     # also prune arguments for empty spaces
-                    args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
+                    args = [arg.strip() for arg in value[index + 7 : ].split(',') if arg.strip()]
                     res, error = self.exec(name, args)
-                    if error != None:
+                    if error:
                         return None, Traceback(pos + 1, error)
                 elif re.match(CALL_VALUE, line):
                     value = line[14 : ]
@@ -222,23 +189,22 @@ class Interpreter:
                     # also prune arguments for empty spaces
                     args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
                     res, error = self.exec(name, args)
-                    if error != None:
+                    if error:
                         return None, Traceback(pos + 1, error)
-                    else:
-                        # assign value to return)var
-                        error = self.cur_context.set_var(return_var, res)
-                        if error != None:
-                            return None, Traceback(pos + 1, error)
+                    # assign value to return)var
+                    error = self.cur_context.set_var(return_var, res)
+                    if error:
+                        return None, Traceback(pos + 1, error)
                 elif re.match(CAST, line):
                     value = line[17 : ]
                     index = value.find(' ')
                     name = value[ : index]
                     to_type = value[index + 1 : ]
                     var, error = self.cur_context.get_var(name)
-                    if error != None:
+                    if error:
                         return None, Traceback(pos + 1, error)
                     res, error = self.cast(var, to_type)
-                    if error != None:
+                    if error:
                         return None, Traceback(pos + 1, error)
                     self.cur_context.set_var(name, res)
                 else:
@@ -253,10 +219,12 @@ class Interpreter:
 
     # evaluates an expression using expression_parser and lexer
     def evaluate(self, text, context=None):
-        if context == None:
+        if not context:
             context = self.cur_context
+        #print(text)
         l = Lexer(text, context) # pass in current context as a parameter
         tokens, error = l.make_tokens()
+        #print(tokens)
         if error:
             return None, error
         p = Parser(tokens)
@@ -276,26 +244,30 @@ class Interpreter:
             return self.exec_builtin(function, args)
         # otherwise get arguments and source code from current context
         func_args, src, error = self.cur_context.get_function(function)
-        if error != None:
+        if error:
             return None, error 
-        tmp_interpreter = Interpreter() # new runtime
-        tmp_interpreter.append('[Chorus]')
+        code = ['[Chorus]']
         # if argument count matches
         if len(args) == len(func_args):
             # create all passed in variables locally at the start
             for i in range(len(args)):
-                tmp_interpreter.append('Never gonna let ' + func_args[i] + ' down')
+                code.append('Never gonna let ' + func_args[i] + ' down')
                 res, error = self.evaluate(args[i]) # evaluate arguments before appending
-                if error != None:
+                if error:
                     return None, error
-                tmp_interpreter.append('Never gonna give ' + func_args[i] + ' ' + str(res.value))
+                if res.type == TT_ARRAY:
+                    raise NotImplementedError('Arrays as arguments not yet implemented')
+                else:
+                    code.append('Never gonna give ' + func_args[i] + ' ' + str(res.value))
             # append all function lines
             for line in src:
-                tmp_interpreter.append(line)
+                code.append(line)
             # add undefined return value in case no return statement at the end
-            tmp_interpreter.append('(Ooh) Never gonna give, never gonna give (give you UNDEFINED)')
+            code.append('(Ooh) Never gonna give, never gonna give (give you UNDEFINED)')
+            tmp_interpreter = Interpreter(code)
             # execute with global context so runtime has access to variables and functions
             res, error = tmp_interpreter.execute(self.global_context)
+            print('Debug: ' + str(res))
             return res, error
         else:
             return None, SyntaxError('Too many or too little arguments')
@@ -305,7 +277,7 @@ class Interpreter:
         # evaluate all arguments
         for i in range(len(args)):
             res, error = self.evaluate(args[i])
-            if error != None:
+            if error:
                 return None, error
             args[i] = res
         if function == FUNCTION_POP:
@@ -353,7 +325,7 @@ class Interpreter:
             # takes parameters [array, startIndex, endIndex]
             # [startIndex, endIndex)
             if len(args) == 3:
-                # check if indexes are in bounds
+                # check if indices are in bounds
                 if args[0].type == TT_ARRAY and args[1].type == TT_INT and args[2].type == TT_INT:
                     if len(args[0].value) > args[1].value and len(args[0].value) >= args[2].value\
                     and args[1].value >= 0 and args[2].value >= 0 and args[1].value <= args[2].value:

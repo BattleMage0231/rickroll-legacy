@@ -190,7 +190,7 @@ Following that may be any amount of code which make up the function. A special s
 
 To call a function, use the call and call value statements.
 
-To call a function without using its return value, use the call statement with syntax ```Never gonna run FUNC and desert ARG1, ARG2, ..., ARGN```, where ```FUNC``` is the name of the function and ```ARG1, ARG2, ..., ARGN``` are the arguments seprated by ', '. To call a function with no arguments, make ```ARG1``` 'you'.
+To call a function without using its return value, use the call statement with syntax ```Never gonna run FUNC and desert ARG1, ARG2, ..., ARGN```, where ```FUNC``` is the name of the function and ```ARG1, ARG2, ..., ARGN``` are the arguments seprated by ','. To call a function with no arguments, make ```ARG1``` 'you'.
 
 To call a function and use its return value, add ```(Ooh give you NAME)``` before the call statement (where ```NAME``` is the name of the variable the value is assigned to). This is a call value statement.
 
