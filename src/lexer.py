@@ -10,7 +10,6 @@ class Lexer:
         self.context = context
         self.pos = -1
         self.cur_char = None
-        self.unary_minus = False # initially there is no unary minus
         self.advance()
     
     # advances the pointer one step
@@ -86,7 +85,7 @@ class Lexer:
                 # if current character is first character or last token
                 # was not int or float
                 if len(tokens) == 0 or (tokens[-1].type != TT_INT and tokens[-1].type != TT_FLOAT):
-                    self.unary_minus = not self.unary_minus
+                    tokens.append(Token(TT_UNARY_MINUS))
                 else:
                     tokens.append(Token(TT_SUBTRACT))
             elif self.cur_char == '*':
@@ -114,8 +113,6 @@ class Lexer:
             self.advance()
         if parenthesis_balance != 0:
             return None, IllegalCharError('Unbalanced parenthesis')
-        if self.unary_minus:
-            return None, IllegalCharError('Unexpected end of statement')
         return tokens, None
 
     # parses a number
@@ -143,10 +140,6 @@ class Lexer:
                 num *= 10
                 num += int(self.cur_char)
             self.advance()
-        # if unary minus
-        if self.unary_minus:
-            num *= -1
-            self.unary_minus = False
         # assign type to token
         if is_float:
             return Token(TT_FLOAT, num), None
@@ -168,11 +161,6 @@ class Lexer:
         while cur_context != None:
             # if variable exists in this context, return it
             if name in cur_context.variable_cache:
-                if self.unary_minus:
-                    self.unary_minus = False
-                    if not cur_context.variable_cache[name].type in [TT_INT, TT_FLOAT]:
-                        return None, RuntimeError('Expected INT or FLOAT')
-                    return Token(cur_context.variable_cache[name].type, -cur_context.variable_cache[name].value), None
                 return cur_context.variable_cache[name], None
             cur_context = cur_context.parent
         # otherwise variable was not found

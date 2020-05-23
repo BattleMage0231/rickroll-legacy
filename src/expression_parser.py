@@ -148,6 +148,13 @@ class Parser:
                 break
             self.advance()
 
+        # do unary minus operation
+        self.reset()
+        error = self.evaluate_for_unary([TT_UNARY_MINUS], UnaryConstants.CANCEL_OUT)
+        if error != None:
+            self.start_stack.pop()
+            return None, error
+
         # do array access operation
         self.reset()
         error = self.evaluate_for_binary([TT_ARRAY_ACCESS])
