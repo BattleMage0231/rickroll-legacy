@@ -44,7 +44,7 @@ class Shell:
             elif text == 'run':
                 try:
                     inter = interpreter.Interpreter(self.code)
-                    exit_code, error = inter.execute(basic.Context(None))
+                    exit_code, error = inter.run()
                     if error != None:
                         print(Colors.in_color(error.as_string(), Colors.COLOR_RED))
                 except KeyboardInterrupt:
@@ -104,7 +104,7 @@ if __name__ == '__main__':
                 src = f.read()
                 inter = interpreter.Interpreter(src.split('\n'))
                 try:
-                    exit_code, error = inter.execute(basic.Context(None))
+                    exit_code, error = inter.run()
                     if error != None:
                         print(Colors.in_color(error.as_string(), Colors.COLOR_RED))
                 except KeyboardInterrupt:
