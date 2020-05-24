@@ -171,7 +171,7 @@ Never gonna say a
 
 The ```[Verse]``` block is the equivalent of a function or method. Its code is not immediately ran when the interpreter encounters it. It is only ran when it is called by another block. There are special statements that make up a function.
 
-A function declaration starts with ```[Verse NAME]```, where ```NAME``` follows the same conventions as a variable name. A name may be shared between a variable and function. A function has a context that extends the global context. Although ```[Verse]``` blocks may be declared anywhere, only blocks declared before ```[Chorus]``` may be used inside of it.
+A function declaration starts with ```[Verse NAME]```, where ```NAME``` follows the same conventions as a variable name. A name may be shared between a variable and function. A function has a context that extends the global context. ```[Verse]``` blocks may be declared anywhere, and can be seen by other blocks regardless of order.
 
 Following that is the arguments statement, which has syntax ```(Ooh give you ARG1 ARG2 ... ARGN)```, where ```ARG1 ARG2 ... ARGN``` are the names of the arguments of the function (not the types). To indicate that a function has no argument, make ```ARG1``` 'up'.
 
