@@ -296,7 +296,7 @@ class Context:
     def __init__(self, parent):
         self.parent = parent
         self.variable_cache = dict()
-        self.function_cache = dict() # name -> (args, src)
+        self.function_cache = dict() # name -> (args, src, start_line)
 
     # for debugging
     def __repr__(self):
@@ -344,7 +344,7 @@ class Context:
         return None, RuntimeError('Variable ' + name + ' doesn\'t exist')
     
     # add function with name, arguments, source code
-    def add_function(self, name, args, src):
+    def add_function(self, name, args, src, line):
         cur_context = self
         # check duplicate names
         while cur_context != None:
@@ -352,7 +352,7 @@ class Context:
                 return RuntimeError('Function ' + name + ' already exists')
             cur_context = cur_context.parent
         # add tuple of function info (string array, string array)
-        self.function_cache[name] = (args, src)
+        self.function_cache[name] = (args, src, line)
 
     # get arguments and source code of function with name
     # returns (string array, string array) = (arguments, code lines)
@@ -361,10 +361,10 @@ class Context:
         # find function if it exists
         while cur_context != None:
             if name in cur_context.function_cache:
-                # return tuple
-                return cur_context.function_cache[name][0], cur_context.function_cache[name][1], None
+                # return unpacked tuple
+                return *cur_context.function_cache[name], None
             cur_context = cur_context.parent
-        return None, None, RuntimeError('Function ' + name + ' doesn\'t exist')
+        return None, None, None, RuntimeError('Function ' + name + ' doesn\'t exist')
 
 # Variable Constants
 

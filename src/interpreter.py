@@ -5,8 +5,6 @@ from basic import *
 from expression_parser import *
 from lexer import *
 
-# TODO add custom handling for functions
-
 class Interpreter: 
     def __init__(self, text=[]):
         self.text = text
@@ -31,7 +29,7 @@ class Interpreter:
                 if no_intro:
                     return None, SyntaxError('[Intro] block already found', pos)
                 no_intro = True
-                intro_info = []
+                intro_info = ([], pos)
                 # line is starting point of intro block
                 cur_block = TT_INTRO
             elif re.match(VERSE, line):
@@ -42,7 +40,7 @@ class Interpreter:
                     # tuple of (name, args, src)
                     if loop_balance != 0:
                         return None, RuntimeError('Unexpected function end', pos)
-                    self.cur_context.add_function(function_info[0], function_info[1], function_info[2])
+                    self.cur_context.add_function(function_info[0], function_info[1], function_info[2], function_info[3])
                 loop_balance = 0
                 cur_block = TT_VERSE
                 name = line[7 : -1] # name of function
@@ -57,19 +55,19 @@ class Interpreter:
                     if len(args) == 1 and args[0] == 'up':
                         args = []
                     # store function info
-                    function_info = (name, args, [])
+                    function_info = (name, args, [], pos + 1)
             elif re.match(CHORUS, line):
                 if no_chorus:
                     return None, SyntaxError('[Chorus] block already found', pos)
                 no_chorus = True
-                chorus_info = []
+                chorus_info = ([], pos + 1)
                 no_intro = True
                 # line is starting point of chorus block
                 # if there was a previous verse, store it
                 if cur_block == TT_VERSE:
                     if loop_balance != 0:
                         return None, RuntimeError('Unexpected function end', pos)
-                    self.cur_context.add_function(function_info[0], function_info[1], function_info[2])
+                    self.cur_context.add_function(function_info[0], function_info[1], function_info[2], function_info[3])
                 loop_balance = 0
                 cur_block = TT_CHORUS
                 self.cur_context = Context(self.cur_context) # new local context
@@ -82,9 +80,9 @@ class Interpreter:
                     return None, RuntimeError('Unexpected function end', pos)
                 function_info[2].append(line) # do not execute immediately since part of block
             elif cur_block == TT_INTRO:
-                intro_info.append(line)
+                intro_info[0].append(line)
             elif cur_block == TT_CHORUS:
-                chorus_info.append(line)
+                chorus_info[0].append(line)
             else:
                 print('Other!')
             pos += 1
@@ -92,19 +90,19 @@ class Interpreter:
         if loop_balance != 0:
             return None, RuntimeError('Unexpected EOF', pos)
         if cur_block == TT_VERSE:
-            self.cur_context.add_function(function_info[0], function_info[1], function_info[2])
+            self.cur_context.add_function(function_info[0], function_info[1], function_info[2], function_info[3])
         if intro_info:
-            res, error = self.execute(intro_info, self.global_context)
+            res, error = self.execute(intro_info[0], self.global_context, intro_info[1])
             if error:
                 return None, error
         if chorus_info:
-            res, error = self.execute(chorus_info, Context(self.global_context))
+            res, error = self.execute(chorus_info[0], Context(self.global_context), chorus_info[1])
             if error:
                 return None, error
         return None, None
 
     # code -> array of lines
-    def execute(self, code, context):
+    def execute(self, code, context, line_index):
         loop_stack = []
         cur_context = context
         pos = 0
@@ -120,7 +118,7 @@ class Interpreter:
                 # evaluate expression and print
                 res, error = self.evaluate(expr, cur_context)
                 if error:
-                    return None, Traceback(pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error)
                 else:
                     print(res)
             elif re.match(DECLARE, line):
@@ -128,31 +126,31 @@ class Interpreter:
                 # add variable to current context
                 error = cur_context.add_var(name, CONSTANTS['UNDEFINED'])
                 if error:
-                    return None, Traceback(pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error)
             elif re.match(ASSIGN, line):
                 value = line[17 : ] # get arguments as raw text
                 index = value.find(' ') # variable names cannot have spaces
                 # if no space found
                 if index == -1:
-                    return None, IllegalArgumentError(value, pos)
+                    return None, IllegalArgumentError(value, line_index + pos + 1)
                 name = value[ : index] # everything before space is name
                 expr = value[index : ] # everything after is expression
                 value, error = self.evaluate(expr, cur_context)
                 if error:
-                    return None, Traceback(pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error)
                 # set variable
                 error = cur_context.set_var(name, value)
                 if error:
-                    return None, Traceback(pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error)
             elif re.match(CHECK_TRUE, line):
                 expr = line[20 : ] # get boolean expression
                 res, error = self.evaluate(expr, cur_context)
                 if error:
-                    return None, Traceback(pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error)
                 if res.type != TT_BOOL:
                     res, error = self.cast(res, TT_BOOL)
                     if error:
-                        return None, IllegalArgumentError('Boolean expected', pos)
+                        return None, IllegalArgumentError('Boolean expected', line_index + pos + 1)
                 # if true, execute the inside
                 if res.value == 'TRUE':
                     loop_stack.append(pos)
@@ -176,7 +174,7 @@ class Interpreter:
                     # if position is end of file and balance is not 0
                     # then the loop is not balanced
                     if loop_balance != 0 and pos == len(self.text):
-                        return None, RuntimeError('Unexpected EOF', pos)
+                        return None, RuntimeError('Unexpected EOF', line_index + pos + 1)
                     else:
                         # position was already incremented to the next
                         # during the while loop so no need for pos += 1
@@ -184,14 +182,14 @@ class Interpreter:
             elif re.match(IF_END, line):
                 # if loop stack is empty
                 if not loop_stack:
-                    return None, RuntimeError('Unexpected statement end', pos)
+                    return None, RuntimeError('Unexpected statement end', line_index + pos + 1)
                 # if statement end, simply pop
                 loop_stack.pop()
                 cur_context = cur_context.parent # remove context
             elif re.match(WHILE_END, line):
                 # if loop stack is empty
                 if not loop_stack:
-                    return None, RuntimeError('Unexpected statement end', pos)
+                    return None, RuntimeError('Unexpected statement end', line_index + pos + 1)
                 # reset position to the original position - 1
                 # pos gets incremented at the end of this loop
                 pos = loop_stack.pop() - 1
@@ -200,7 +198,7 @@ class Interpreter:
                 # get return value
                 return_val, error = self.evaluate(line[51 : -1], cur_context)
                 if error:
-                    return None, Traceback(pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error)
                 # prematurely return
                 return return_val, None
             elif re.match(CALL, line):
@@ -213,7 +211,7 @@ class Interpreter:
                 args = [arg.strip() for arg in value[index + 7 : ].split(',') if arg.strip()]
                 res, error = self.exec(name, args, cur_context)
                 if error:
-                    return None, Traceback(pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error)
             elif re.match(CALL_VALUE, line):
                 value = line[14 : ]
                 index = value.find(' ')
@@ -227,11 +225,11 @@ class Interpreter:
                 args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
                 res, error = self.exec(name, args, cur_context)
                 if error:
-                    return None, Traceback(pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error)
                 # assign value to return)var
                 error = cur_context.set_var(return_var, res)
                 if error:
-                    return None, Traceback(pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error)
             elif re.match(CAST, line):
                 value = line[17 : ]
                 index = value.find(' ')
@@ -239,10 +237,10 @@ class Interpreter:
                 to_type = value[index + 1 : ]
                 var, error = cur_context.get_var(name)
                 if error:
-                    return None, Traceback(pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error)
                 res, error = self.cast(var, to_type)
                 if error:
-                    return None, Traceback(pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error)
                 cur_context.set_var(name, res)
             else:
                 print('Other!')
@@ -271,7 +269,7 @@ class Interpreter:
         if function in FUNCTION_CONSTANTS:
             return self.exec_builtin(function, args, context)
         # otherwise get arguments and source code from current context
-        func_args, src, error = context.get_function(function)
+        func_args, src, line, error = context.get_function(function)
         if error:
             return None, error 
         if len(args) == len(func_args):
@@ -283,7 +281,7 @@ class Interpreter:
                 new_context._unsafe_set_var(func_arg, res)
         else:
             return None, SyntaxError('Too many or too little arguments')
-        res, error = self.execute(src, new_context)
+        res, error = self.execute(src, new_context, line)
         if error:
             return None, error
         return res, None
