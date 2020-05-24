@@ -252,7 +252,6 @@ class Operation:
                         return Token(TT_BOOL, 'TRUE'), None
                     return Token(TT_BOOL, 'FALSE'), None
         elif self.operator.type == TT_ARRAY_ACCESS:
-            print('hi')
             # if operator is binary
             if len(self.args) == 2:
                 # if arguments are array and int
@@ -302,6 +301,9 @@ class Context:
     # for debugging
     def __repr__(self):
         return str([str(self.variable_cache), str(self.function_cache)])
+
+    def _unsafe_set_var(self, name, value):
+        self.variable_cache[name] = value
 
     # adds a variable to the current variable cache
     def add_var(self, name, value):

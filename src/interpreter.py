@@ -10,15 +10,17 @@ from lexer import *
 class Interpreter: 
     def __init__(self, text=[]):
         self.text = text
+        self.global_context = Context(None)
 
-    def execute(self, context):
+    def run(self):
         # set local global context and current context
-        self.global_context = context
         self.cur_context = self.global_context
         no_intro = False
+        no_chorus = False
         cur_block = None
         function_info = None
-        loop_stack = [] # stores lines of loop declarations
+        intro_info = None
+        chorus_info = None
         loop_balance = 0
         pos = 0
         while pos < len(self.text):
@@ -29,6 +31,7 @@ class Interpreter:
                 if no_intro:
                     return None, SyntaxError('[Intro] block already found', pos)
                 no_intro = True
+                intro_info = []
                 # line is starting point of intro block
                 cur_block = TT_INTRO
             elif re.match(VERSE, line):
@@ -56,6 +59,10 @@ class Interpreter:
                     # store function info
                     function_info = (name, args, [])
             elif re.match(CHORUS, line):
+                if no_chorus:
+                    return None, SyntaxError('[Chorus] block already found', pos)
+                no_chorus = True
+                chorus_info = []
                 no_intro = True
                 # line is starting point of chorus block
                 # if there was a previous verse, store it
@@ -74,157 +81,178 @@ class Interpreter:
                 if loop_balance < 0:
                     return None, RuntimeError('Unexpected function end', pos)
                 function_info[2].append(line) # do not execute immediately since part of block
-            elif cur_block == TT_INTRO or cur_block == TT_CHORUS:
-                if re.match(SAY, line):
-                    expr = line[16 : ] # get expression
-                    # special command goodbye exits the program
-                    if expr == 'goodbye':
-                        exit()
-                    # evaluate expression and print
-                    res, error = self.evaluate(expr)
-                    if error:
-                        return None, Traceback(pos + 1, error)
-                    else:
-                        print(res)
-                elif re.match(DECLARE, line):
-                    name = line[16 : -5] # variable name
-                    # add variable to current context
-                    error = self.cur_context.add_var(name, CONSTANTS['UNDEFINED'])
-                    if error:
-                        return None, Traceback(pos + 1, error)
-                elif re.match(ASSIGN, line):
-                    value = line[17 : ] # get arguments as raw text
-                    index = value.find(' ') # variable names cannot have spaces
-                    # if no space found
-                    if index == -1:
-                        return None, IllegalArgumentError(value, pos)
-                    name = value[ : index] # everything before space is name
-                    expr = value[index : ] # everything after is expression
-                    value, error = self.evaluate(expr)
-                    if error:
-                        return None, Traceback(pos + 1, error)
-                    # set variable
-                    error = self.cur_context.set_var(name, value)
-                    if error:
-                        return None, Traceback(pos + 1, error)
-                elif re.match(CHECK_TRUE, line):
-                    expr = line[20 : ] # get boolean expression
-                    res, error = self.evaluate(expr)
-                    if error:
-                        return None, Traceback(pos + 1, error)
-                    if res.type != TT_BOOL:
-                        res, error = self.cast(res, TT_BOOL)
-                        if error:
-                            return None, IllegalArgumentError('Boolean expected', pos)
-                    # if true, execute the inside
-                    if res.value == 'TRUE':
-                        loop_stack.append(pos)
-                        self.cur_context = Context(self.cur_context) # make new context
-                    else:
-                        # else skip to the end
-                        pos += 1
-                        loop_balance = 1 # start with current CHECK_TRUE statement
-                        # while pos is not end of program and loop is not balanced
-                        while pos < len(self.text) and loop_balance != 0:
-                            # new CHECK_TRUE statement
-                            if re.match(CHECK_TRUE, self.text[pos].strip()):
-                                loop_balance += 1
-                            elif re.match(IF_END, self.text[pos].strip()) or re.match(WHILE_END, self.text[pos].strip()):
-                                # new closing statement
-                                loop_balance -= 1
-                            # error, loop not balanced
-                            if loop_balance < 0:
-                                break
-                            pos += 1
-                        # if position is end of file and balance is not 0
-                        # then the loop is not balanced
-                        if loop_balance != 0 and pos == len(self.text):
-                            return None, RuntimeError('Unexpected EOF', pos)
-                        else:
-                            # position was already incremented to the next
-                            # during the while loop so no need for pos += 1
-                            continue
-                elif re.match(IF_END, line):
-                    # if loop stack is empty
-                    if not loop_stack:
-                        return None, RuntimeError('Unexpected statement end', pos)
-                    # if statement end, simply pop
-                    loop_stack.pop()
-                    self.cur_context = self.cur_context.parent # remove context
-                elif re.match(WHILE_END, line):
-                    # if loop stack is empty
-                    if not loop_stack:
-                        return None, RuntimeError('Unexpected statement end', pos)
-                    # reset position to the original position - 1
-                    # pos gets incremented at the end of this loop
-                    pos = loop_stack.pop() - 1
-                    self.cur_context = self.cur_context.parent # remove context
-                elif re.match(RETURN, line):
-                    # get return value
-                    return_val, error = self.evaluate(line[51 : -1])
-                    if error:
-                        return None, Traceback(pos + 1, error)
-                    # prematurely return
-                    return return_val, None
-                elif re.match(CALL, line):
-                    value = line[16 : ]
-                    index = value.find(' ')
-                    name = value[ : index].strip() # get function name
-                    index = value.find('desert') # get first index of 'desert' as reference
-                    # get arguments trimmed and delimited by ', '
-                    # also prune arguments for empty spaces
-                    args = [arg.strip() for arg in value[index + 7 : ].split(',') if arg.strip()]
-                    res, error = self.exec(name, args)
-                    if error:
-                        return None, Traceback(pos + 1, error)
-                elif re.match(CALL_VALUE, line):
-                    value = line[14 : ]
-                    index = value.find(' ')
-                    return_var = value[ : index - 1] # get return variable
-                    value = value[index + 17 : ]
-                    index = value.find(' ')
-                    name = value[ : index].strip() # get function name
-                    index = value.find('desert') # get first index of 'desert' as reference
-                    # get arguments trimmed and delimited by ', '
-                    # also prune arguments for empty spaces
-                    args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
-                    res, error = self.exec(name, args)
-                    if error:
-                        return None, Traceback(pos + 1, error)
-                    # assign value to return)var
-                    error = self.cur_context.set_var(return_var, res)
-                    if error:
-                        return None, Traceback(pos + 1, error)
-                elif re.match(CAST, line):
-                    value = line[17 : ]
-                    index = value.find(' ')
-                    name = value[ : index]
-                    to_type = value[index + 1 : ]
-                    var, error = self.cur_context.get_var(name)
-                    if error:
-                        return None, Traceback(pos + 1, error)
-                    res, error = self.cast(var, to_type)
-                    if error:
-                        return None, Traceback(pos + 1, error)
-                    self.cur_context.set_var(name, res)
-                else:
-                    print('Other!')
+            elif cur_block == TT_INTRO:
+                intro_info.append(line)
+            elif cur_block == TT_CHORUS:
+                chorus_info.append(line)
             else:
                 print('Other!')
             pos += 1
         # if loop stack has not been closed
-        if loop_stack:
+        if loop_balance != 0:
             return None, RuntimeError('Unexpected EOF', pos)
+        if cur_block == TT_VERSE:
+            self.cur_context.add_function(function_info[0], function_info[1], function_info[2])
+        if intro_info:
+            res, error = self.execute(intro_info, self.global_context)
+            if error:
+                return None, error
+        if chorus_info:
+            res, error = self.execute(chorus_info, Context(self.global_context))
+            if error:
+                return None, error
         return None, None
 
+    # code -> array of lines
+    def execute(self, code, context):
+        loop_stack = []
+        cur_context = context
+        pos = 0
+        while pos < len(code):
+            line = code[pos].strip()
+            if not line:
+                pass 
+            elif re.match(SAY, line):
+                expr = line[16 : ] # get expression
+                # special command goodbye exits the program
+                if expr == 'goodbye':
+                    exit()
+                # evaluate expression and print
+                res, error = self.evaluate(expr, cur_context)
+                if error:
+                    return None, Traceback(pos + 1, error)
+                else:
+                    print(res)
+            elif re.match(DECLARE, line):
+                name = line[16 : -5] # variable name
+                # add variable to current context
+                error = cur_context.add_var(name, CONSTANTS['UNDEFINED'])
+                if error:
+                    return None, Traceback(pos + 1, error)
+            elif re.match(ASSIGN, line):
+                value = line[17 : ] # get arguments as raw text
+                index = value.find(' ') # variable names cannot have spaces
+                # if no space found
+                if index == -1:
+                    return None, IllegalArgumentError(value, pos)
+                name = value[ : index] # everything before space is name
+                expr = value[index : ] # everything after is expression
+                value, error = self.evaluate(expr, cur_context)
+                if error:
+                    return None, Traceback(pos + 1, error)
+                # set variable
+                error = cur_context.set_var(name, value)
+                if error:
+                    return None, Traceback(pos + 1, error)
+            elif re.match(CHECK_TRUE, line):
+                expr = line[20 : ] # get boolean expression
+                res, error = self.evaluate(expr, cur_context)
+                if error:
+                    return None, Traceback(pos + 1, error)
+                if res.type != TT_BOOL:
+                    res, error = self.cast(res, TT_BOOL)
+                    if error:
+                        return None, IllegalArgumentError('Boolean expected', pos)
+                # if true, execute the inside
+                if res.value == 'TRUE':
+                    loop_stack.append(pos)
+                    cur_context = Context(cur_context) # make new context
+                else:
+                    # else skip to the end
+                    pos += 1
+                    loop_balance = 1 # start with current CHECK_TRUE statement
+                    # while pos is not end of program and loop is not balanced
+                    while pos < len(code) and loop_balance != 0:
+                        # new CHECK_TRUE statement
+                        if re.match(CHECK_TRUE, code[pos].strip()):
+                            loop_balance += 1
+                        elif re.match(IF_END, code[pos].strip()) or re.match(WHILE_END, code[pos].strip()):
+                            # new closing statement
+                            loop_balance -= 1
+                        # error, loop not balanced
+                        if loop_balance < 0:
+                            break
+                        pos += 1
+                    # if position is end of file and balance is not 0
+                    # then the loop is not balanced
+                    if loop_balance != 0 and pos == len(self.text):
+                        return None, RuntimeError('Unexpected EOF', pos)
+                    else:
+                        # position was already incremented to the next
+                        # during the while loop so no need for pos += 1
+                        continue
+            elif re.match(IF_END, line):
+                # if loop stack is empty
+                if not loop_stack:
+                    return None, RuntimeError('Unexpected statement end', pos)
+                # if statement end, simply pop
+                loop_stack.pop()
+                cur_context = cur_context.parent # remove context
+            elif re.match(WHILE_END, line):
+                # if loop stack is empty
+                if not loop_stack:
+                    return None, RuntimeError('Unexpected statement end', pos)
+                # reset position to the original position - 1
+                # pos gets incremented at the end of this loop
+                pos = loop_stack.pop() - 1
+                cur_context = cur_context.parent # remove context
+            elif re.match(RETURN, line):
+                # get return value
+                return_val, error = self.evaluate(line[51 : -1], cur_context)
+                if error:
+                    return None, Traceback(pos + 1, error)
+                # prematurely return
+                return return_val, None
+            elif re.match(CALL, line):
+                value = line[16 : ]
+                index = value.find(' ')
+                name = value[ : index].strip() # get function name
+                index = value.find('desert') # get first index of 'desert' as reference
+                # get arguments trimmed and delimited by ', '
+                # also prune arguments for empty spaces
+                args = [arg.strip() for arg in value[index + 7 : ].split(',') if arg.strip()]
+                res, error = self.exec(name, args, cur_context)
+                if error:
+                    return None, Traceback(pos + 1, error)
+            elif re.match(CALL_VALUE, line):
+                value = line[14 : ]
+                index = value.find(' ')
+                return_var = value[ : index - 1] # get return variable
+                value = value[index + 17 : ]
+                index = value.find(' ')
+                name = value[ : index].strip() # get function name
+                index = value.find('desert') # get first index of 'desert' as reference
+                # get arguments trimmed and delimited by ', '
+                # also prune arguments for empty spaces
+                args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
+                res, error = self.exec(name, args, cur_context)
+                if error:
+                    return None, Traceback(pos + 1, error)
+                # assign value to return)var
+                error = cur_context.set_var(return_var, res)
+                if error:
+                    return None, Traceback(pos + 1, error)
+            elif re.match(CAST, line):
+                value = line[17 : ]
+                index = value.find(' ')
+                name = value[ : index]
+                to_type = value[index + 1 : ]
+                var, error = cur_context.get_var(name)
+                if error:
+                    return None, Traceback(pos + 1, error)
+                res, error = self.cast(var, to_type)
+                if error:
+                    return None, Traceback(pos + 1, error)
+                cur_context.set_var(name, res)
+            else:
+                print('Other!')
+            pos += 1
+        return CONSTANTS['UNDEFINED'], None
+
     # evaluates an expression using expression_parser and lexer
-    def evaluate(self, text, context=None):
-        if not context:
-            context = self.cur_context
-        #print(text)
+    def evaluate(self, text, context):
         l = Lexer(text, context) # pass in current context as a parameter
         tokens, error = l.make_tokens()
-        #print(tokens)
         if error:
             return None, error
         p = Parser(tokens)
@@ -235,48 +263,36 @@ class Interpreter:
 
     # takes in function name and unevaluated arguments
     # executes function and returns result
-    def exec(self, function, args):
+    def exec(self, function, args, context):
         # 'you' is a constant that means no arguments
         if args[0] == 'you':
             args = []
         # evaluate in self.exec_builtin if function is built-in
         if function in FUNCTION_CONSTANTS:
-            return self.exec_builtin(function, args)
+            return self.exec_builtin(function, args, context)
         # otherwise get arguments and source code from current context
-        func_args, src, error = self.cur_context.get_function(function)
+        func_args, src, error = context.get_function(function)
         if error:
             return None, error 
-        code = ['[Chorus]']
-        # if argument count matches
         if len(args) == len(func_args):
-            # create all passed in variables locally at the start
-            for i in range(len(args)):
-                code.append('Never gonna let ' + func_args[i] + ' down')
-                res, error = self.evaluate(args[i]) # evaluate arguments before appending
+            new_context = Context(self.global_context)
+            for (arg, func_arg) in zip(args, func_args):
+                res, error = self.evaluate(arg, context)
                 if error:
                     return None, error
-                if res.type == TT_ARRAY:
-                    raise NotImplementedError('Arrays as arguments not yet implemented')
-                else:
-                    code.append('Never gonna give ' + func_args[i] + ' ' + str(res.value))
-            # append all function lines
-            for line in src:
-                code.append(line)
-            # add undefined return value in case no return statement at the end
-            code.append('(Ooh) Never gonna give, never gonna give (give you UNDEFINED)')
-            tmp_interpreter = Interpreter(code)
-            # execute with global context so runtime has access to variables and functions
-            res, error = tmp_interpreter.execute(self.global_context)
-            print('Debug: ' + str(res))
-            return res, error
+                new_context._unsafe_set_var(func_arg, res)
         else:
             return None, SyntaxError('Too many or too little arguments')
+        res, error = self.execute(src, new_context)
+        if error:
+            return None, error
+        return res, None
 
     # executes a built-in function
-    def exec_builtin(self, function, args):
+    def exec_builtin(self, function, args, context):
         # evaluate all arguments
         for i in range(len(args)):
-            res, error = self.evaluate(args[i])
+            res, error = self.evaluate(args[i], context)
             if error:
                 return None, error
             args[i] = res
