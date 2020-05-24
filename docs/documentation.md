@@ -173,7 +173,7 @@ The ```[Verse]``` block is the equivalent of a function or method. Its code is n
 
 A function declaration starts with ```[Verse NAME]```, where ```NAME``` follows the same conventions as a variable name. A name may be shared between a variable and function. A function has a context that extends the global context. ```[Verse]``` blocks may be declared anywhere, and can be seen by other blocks regardless of order.
 
-Following that is the arguments statement, which has syntax ```(Ooh give you ARG1 ARG2 ... ARGN)```, where ```ARG1 ARG2 ... ARGN``` are the names of the arguments of the function (not the types). To indicate that a function has no argument, make ```ARG1``` 'up'.
+Following that is the arguments statement, which has syntax ```(Ooh give you ARG1 ARG2 ... ARGN)```, where ```ARG1 ARG2 ... ARGN``` are the names of the arguments of the function (not the types). To indicate that a function has no argument, make ```ARG1``` 'up'. An argument may share a name with a global variable, the argument will take precedence over the global variable.
 
 ```
 [Verse do_nothing]
