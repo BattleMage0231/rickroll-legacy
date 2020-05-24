@@ -37,10 +37,10 @@ class Interpreter:
                 # line is starting point of verse block
                 # if there was a previous verse, store it
                 if cur_block == TT_VERSE:
-                    # tuple of (name, args, src)
                     if loop_balance != 0:
                         return None, RuntimeError('Unexpected function end', pos)
-                    self.cur_context.add_function(function_info[0], function_info[1], function_info[2], function_info[3])
+                        # tuple of (name, args, src, line)
+                    self.cur_context.add_function(*function_info)
                 loop_balance = 0
                 cur_block = TT_VERSE
                 name = line[7 : -1] # name of function
@@ -268,19 +268,18 @@ class Interpreter:
         # evaluate in self.exec_builtin if function is built-in
         if function in FUNCTION_CONSTANTS:
             return self.exec_builtin(function, args, context)
-        # otherwise get arguments and source code from current context
+        # otherwise get arguments, source code, and line index from current context
         func_args, src, line, error = context.get_function(function)
         if error:
             return None, error 
-        if len(args) == len(func_args):
-            new_context = Context(self.global_context)
-            for (arg, func_arg) in zip(args, func_args):
-                res, error = self.evaluate(arg, context)
-                if error:
-                    return None, error
-                new_context._unsafe_set_var(func_arg, res)
-        else:
+        if len(args) != len(func_args):
             return None, SyntaxError('Too many or too little arguments')
+        new_context = Context(self.global_context)
+        for (arg, func_arg) in zip(args, func_args):
+            res, error = self.evaluate(arg, context)
+            if error:
+                return None, error
+            new_context._unsafe_set_var(func_arg, res) # allow duplicate variables in global
         res, error = self.execute(src, new_context, line)
         if error:
             return None, error
