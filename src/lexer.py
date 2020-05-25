@@ -11,18 +11,19 @@ class Lexer:
         self.pos = -1
         self.cur_char = None
         self.advance()
-    
+
     # advances the pointer one step
     def advance(self):
         self.pos += 1
         # if position is valid
-        self.cur_char = self.text[self.pos] if self.pos < len(self.text) else None
+        self.cur_char = self.text[self.pos] if self.pos < len(
+            self.text) else None
 
     def make_tokens(self):
-        tokens = [] 
+        tokens = []
         parenthesis_balance = 0
         # handles case where text is empty
-        if len(self.text.strip()) == 0: 
+        if len(self.text.strip()) == 0:
             return None, IllegalCharError('Unexpected end of statement')
         # while there is still more text to parse
         while self.cur_char != None:
@@ -88,14 +89,14 @@ class Lexer:
             elif self.cur_char == '*':
                 tokens.append(Token(TT_MULTIPLY))
             elif self.cur_char == '/':
-                tokens.append(Token(TT_DIVIDE)) 
+                tokens.append(Token(TT_DIVIDE))
             elif self.cur_char == '%':
                 tokens.append(Token(TT_MODULO))
             elif self.cur_char == '(':
-                tokens.append(Token(TT_LPAREN)) 
+                tokens.append(Token(TT_LPAREN))
                 parenthesis_balance += 1
             elif self.cur_char == ')':
-                tokens.append(Token(TT_RPAREN)) 
+                tokens.append(Token(TT_RPAREN))
                 parenthesis_balance -= 1
                 # checks parenthesis balance
                 if parenthesis_balance < 0:
@@ -114,7 +115,7 @@ class Lexer:
 
     # parses a number
     def make_number(self):
-        num = 0 # stores the number
+        num = 0  # stores the number
         is_float = False
         decimal_digits = 0
         # while there is more text to parse and the current char is number or decimal
@@ -126,8 +127,8 @@ class Lexer:
                     return None, IllegalCharError('\'.\'')
                 decimal_digits = 1
                 is_float = True
-                self.advance() 
-                continue # skip to next iteration
+                self.advance()
+                continue  # skip to next iteration
             # if is decimal, add to decimal places instead
             if is_float:
                 num += int(self.cur_char) / (10 ** decimal_digits)
