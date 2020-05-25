@@ -108,7 +108,11 @@ class SyntaxError(Error):
 
 class IllegalCastError(Error):
     def __init__(self, details, line=None, child=None):
-        super().__init__('Illegal Case', details, line, child)
+        super().__init__('Illegal Cast', details, line, child)
+
+class IndexOutOfBoundsError(Error):
+    def __init__(self, details, line=None, child=None):
+        super().__init__('Index Out of Bounds', details, line, child)
 
 class Traceback(Error):
     def __init__(self, line=None, child=None):
@@ -258,7 +262,7 @@ class Operation:
                 if self.args[0].type == TT_ARRAY and self.args[1].type == TT_INT:
                     # if index is not in range
                     if len(self.args[0].value) <= self.args[1].value or self.args[1].value < 0:
-                        return None, RuntimeError('Array index out of bounds')
+                        return None, RuntimeError('Array index ' + str(self.args[1].value) + ' out of bounds')
                     # return value at index
                     return self.args[0].value[self.args[1].value], None
         elif self.operator.type == TT_UNARY_MINUS:
@@ -266,7 +270,7 @@ class Operation:
             if len(self.args) == 1:
                 if self.all_satisfies(self.is_number):
                     return Token(self.args[0].type, -self.args[0].value), None
-        return None, RuntimeError('No such operator')
+        return None, RuntimeError('No such operator ' + str(self.operator.type))
 
     # returns true if token is a number
     def is_number(self, token):

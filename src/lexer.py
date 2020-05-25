@@ -71,7 +71,7 @@ class Lexer:
                 self.advance()
                 # if no ending quote found
                 if self.cur_char != '\'':
-                    return None, SyntaxError('Unbalanced char quotations')
+                    return None, IllegalArgumentError('Illegal character ' + str(self.cur_char))
                 # append char
                 tokens.append(Token(TT_CHAR, char))
                 self.advance()

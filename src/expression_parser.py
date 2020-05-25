@@ -97,7 +97,7 @@ class Expression:
     def insert_at_current(self, token):
         token_node = Expression.make_node(token)
         if self.pos.type == TT_HEAD:
-            # should never insert on head
+            # interpreter should never try to insert on head
             raise IndexError('Bad insert on head')
         else:
             self.pos.left.right = token_node # change left node's right node to node to insert
@@ -291,7 +291,7 @@ class Parser:
             elif self.cur_token.type == TT_RPAREN:
                 break
             else:
-                return RuntimeError(self.cur_token)
+                return IllegalArgumentError(str(self.cur_token) + ' not a token')
             self.advance()
         if lastOp:
             return IllegalArgumentError('Expected argument for operator ' + str(lastOp))
@@ -348,7 +348,7 @@ class Parser:
                 # if current expression is inside parenthesis
                 break
             else:
-                return RuntimeError(self.cur_token)
+                return IllegalArgumentError(str(self.cur_token) + ' not a token')
             self.advance()
         if lastOp:
             return IllegalArgumentError('Expected argument for operator ' + str(lastOp))

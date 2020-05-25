@@ -150,7 +150,7 @@ class Interpreter:
                 if res.type != TT_BOOL:
                     res, error = self.cast(res, TT_BOOL)
                     if error:
-                        return None, IllegalArgumentError('Boolean expected', line_index + pos + 1)
+                        return None, IllegalArgumentError('Boolean expected, instead found ' + str(res), line_index + pos + 1)
                 # if true, execute the inside
                 if res.value == 'TRUE':
                     loop_stack.append(pos)
@@ -303,7 +303,7 @@ class Interpreter:
                         tmp_arr.pop(args[1].value)
                         return Token(TT_ARRAY, tmp_arr), None
                     else:
-                        return None, RuntimeError('Array index out of bounds')
+                        return None, IndexOutOfBoundsError('Array index ' + str(args[1].value) + ' out of bounds')
                 else:
                     return None, IllegalArgumentError('Unsupported argument types')
             else:
@@ -329,7 +329,7 @@ class Interpreter:
                         tmp_arr[args[1].value] = args[2]
                         return Token(TT_ARRAY, tmp_arr), None
                     else:
-                        return None, RuntimeError('Array index out of bounds')
+                        return None, IndexOutOfBoundsError('Array index ' + str(args[1].value) + ' out of bounds')
                 else:
                     return None, IllegalArgumentError('Unsupported argument types')
             else:
@@ -345,7 +345,7 @@ class Interpreter:
                         tmp_arr = args[0].value[args[1].value : args[2].value] # subarray
                         return Token(TT_ARRAY, tmp_arr), None
                     else:
-                        return None, RuntimeError('Array index out of bounds')
+                        return None, IndexOutOfBoundsError('Array index ' + str(args[1].value) + ' out of bounds')
                 else:
                     return None, IllegalArgumentError('Unsupported argument types')
             else:
