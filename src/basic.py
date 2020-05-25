@@ -240,14 +240,14 @@ class Operation:
         elif self.operator.type == TT_EQUALS:
             # if operator is binary
             if len(self.args) == 2:
-                if self.all_satisfies(self.is_number) or self.all_of(TT_BOOL):
+                if self.args[0].type == self.args[1].type:
                     if self.args[0].value == self.args[1].value:
                         return Token(TT_BOOL, 'TRUE'), None
                     return Token(TT_BOOL, 'FALSE'), None
         elif self.operator.type == TT_NOT_EQUALS:
             # if operator is binary
             if len(self.args) == 2:
-                if self.all_satisfies(self.is_number) or self.all_of(TT_BOOL):
+                if self.args[0].type == self.args[1].type:
                     if self.args[0].value != self.args[1].value:
                         return Token(TT_BOOL, 'TRUE'), None
                     return Token(TT_BOOL, 'FALSE'), None
