@@ -4,7 +4,6 @@ import sys
 import traceback
 from enum import Enum
 
-import basic
 import interpreter
 
 class ShellColors(Enum):
@@ -15,6 +14,7 @@ class ShellColors(Enum):
 
     @ staticmethod
     def in_color(text, color):
+        """Returns formatted text in color"""
         return color.value + text + ShellColors.COLOR_END.value
 
 INTERNAL_ERROR_MSG = 'An internal exception has occured'
@@ -39,7 +39,7 @@ class Shell:
             # if currently editing code
             if self.in_editor:
                 # format in yellow
-                input_msg = self.format_lineStr(self.line) + ' > '
+                input_msg = self.format_linestr(self.line) + ' > '
                 input_colored = ShellColors.in_color(input_msg, ShellColors.COLOR_YELLOW)
                 text = input(input_colored)
                 # detect for exiting editor
@@ -66,7 +66,7 @@ class Shell:
                 except BaseException:
                     print(INTERNAL_ERROR)
                     print(traceback.format_exc())
-            elif re.match('^delete \d+$', text):
+            elif re.match("^delete \\d+$", text):
                 index = int(text[7 : ])
                 # if index in bounds
                 if index < self.line:
@@ -75,22 +75,22 @@ class Shell:
                 else:
                     err_str = 'No such index'
                     print(ShellColors.in_color(err_str, ShellColors.COLOR_RED))
-            elif re.match('^insert \d+$', text):
+            elif re.match("^insert \\d+$", text):
                 index = int(text[7 : ])
                 # if index in bounds or one after (new line)
                 if index <= self.line:
-                    input_msg = self.format_lineStr(index) + ' > '
+                    input_msg = self.format_linestr(index) + ' > '
                     input_colored = ShellColors.in_color(input_msg, ShellColors.COLOR_YELLOW)
                     text = input(input_colored)
                     self.code.insert(index - 1, text)
                     self.line += 1
                 else:
                     print(ShellColors.in_color('No such index', ShellColors.COLOR_RED))
-            elif re.match('^replace \d+$', text):
+            elif re.match("^replace \\d+$", text):
                 index = int(text[8 : ])
                 # if index in bounds
                 if index < self.line:
-                    input_msg = self.format_lineStr(index) + ' > '
+                    input_msg = self.format_linestr(index) + ' > '
                     input_colored = ShellColors.in_color(input_msg, ShellColors.COLOR_YELLOW)
                     text = input(input_colored)
                     self.code[index - 1] = text
@@ -98,22 +98,22 @@ class Shell:
                     print(ShellColors.in_color('No such index', ShellColors.COLOR_RED))
             elif text == 'display':
                 for index in range(len(self.code)):
-                    input_msg = self.format_lineStr(index + 1) + ' > '
+                    input_msg = self.format_linestr(index + 1) + ' > '
                     input_colored = ShellColors.in_color(input_msg, ShellColors.COLOR_YELLOW)
                     print(input_colored + self.code[index])
             elif text == 'new':
                 self.code = []
                 self.line = 1 # reset line
             elif text == 'exit':
-                exit()
-    def format_lineStr(self, line):
+                sys.exit()
+    def format_linestr(self, line):
         """
         Formats an integer index in the line format.
         1 becomes "  1", 10 becomes " 10", 100 becomes "100", 1000 becomes "0"
         """
-        lineStr = str(line % 1000)
-        length = len(lineStr)
-        return ' ' * (3 - length) + str(lineStr)
+        linestr = str(line % 1000)
+        length = len(linestr)
+        return ' ' * (3 - length) + str(linestr)
 
 # only execute if shell.py was executed
 if __name__ == '__main__':
