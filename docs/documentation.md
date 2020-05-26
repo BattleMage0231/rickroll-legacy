@@ -31,7 +31,7 @@ Operators can be used to perform operations on data types. The following operato
 | ==       |  equals                                                     | 5             |
 | !=       |  not equals                                                 | 5             |
 | &&       |  boolean AND                                                | 6             |
-| \|\|     |  boolean OR                                                 | 6             |
+| \|\|     |  boolean OR                                                 | 7             |
 
 Expressions are formed by combining data types and operators. Expressions may also contain parenthesis for evaluation priority. For example, ```3 + 4 * (6 % 3) > 1``` is a valid expression. It returns ```TRUE```.
 
