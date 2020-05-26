@@ -366,7 +366,7 @@ class Context:
         while cur_context != None:
             if name in cur_context.function_cache:
                 # return unpacked tuple
-                return *cur_context.function_cache[name], None
+                return cur_context.function_cache[name][0], cur_context.function_cache[name][1], cur_context.function_cache[name][2], None
             cur_context = cur_context.parent
         return None, None, None, RuntimeError('Function ' + name + ' doesn\'t exist')
 
