@@ -179,8 +179,10 @@ class Parser:
                 # in case current expression is in parenthesis
                 break
             self.advance()
+        # for argument count, operators to evaluate, chain type if unary
         for arg_count, operators, chain_type in OPERATOR_PRECEDENCE:
-            self.reset()
+            self.reset() # reset
+            # evaluate differently depending on arg count
             if arg_count == 1:
                 error = self.evaluate_for_unary(operators, chain_type)
                 if error is not None:

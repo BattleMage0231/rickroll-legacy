@@ -432,6 +432,7 @@ DATA_TYPES = [
 ]
 
 # stores names of built-in functions
+# used in interpreter to execute functions
 FUNCTION_CONSTANTS = [
     FUNCTION_POP,
     FUNCTION_PUSH,

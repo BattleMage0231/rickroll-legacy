@@ -99,6 +99,7 @@ class Lexer:
             elif self.cur_char == '!':
                 tokens.append(Token(TT_NOT))
             elif self.cur_char.isspace():
+                # pass if space
                 pass
             else:
                 # invalid character

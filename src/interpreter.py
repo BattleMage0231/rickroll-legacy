@@ -41,9 +41,9 @@ class Interpreter:
                 if cur_block == TT_VERSE:
                     if loop_balance != 0:
                         return None, RuntimeError('Unexpected function end', pos)
-                        # tuple of (name, args, src, line)
-                        name, args, src, line = function_info
-                        self.cur_context.add_function(name, args, src, line)
+                    # tuple of (name, args, src, line)
+                    name, args, src, line = function_info
+                    self.cur_context.add_function(name, args, src, line)
                 loop_balance = 0
                 cur_block = TT_VERSE
                 name = line[7 : -1] # name of function
@@ -255,12 +255,12 @@ class Interpreter:
         return CONSTANTS['UNDEFINED'], None
     def evaluate(self, text, context):
         """Evaluates an expression using parser and lexer"""
-        l = Lexer(text, context) # pass in current context as a parameter
-        tokens, error = l.make_tokens()
+        lexer = Lexer(text, context) # pass in current context as a parameter
+        tokens, error = lexer.make_tokens()
         if error is not None:
             return None, error
-        p = Parser(tokens)
-        res, error = p.recurse()
+        parser = Parser(tokens)
+        res, error = parser.recurse()
         if error is not None:
             return None, error
         return res, None
@@ -436,7 +436,7 @@ class Interpreter:
                     return Token(TT_CHAR, chr(token.value)), None
                 if token.type == TT_FLOAT:
                     return Token(TT_CHAR, chr(int(token.value))), None
-            except:
+            except ValueError:
                 return None, IllegalCastError('Not a valid ASCII value')
         elif new_type == TT_UNDEFINED:
             # casting to undefined

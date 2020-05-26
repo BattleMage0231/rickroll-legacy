@@ -115,6 +115,7 @@ class Shell:
         length = len(lineStr)
         return ' ' * (3 - length) + str(lineStr)
 
+# only execute if shell.py was executed
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         shell = Shell()
