@@ -23,4 +23,3 @@ To execute code from a text file:
 ```
 python shell.py "absolute_path.txt"
 ```
-
