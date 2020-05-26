@@ -6,7 +6,9 @@ Esoteric programming language with the only commands being lyrics from Never Gon
 
 # Installation
 
-Simply clone or download this repository to install it.
+To install the latest version, simply clone or download this repository.
+
+To install previous versions, go to releases and download the source code.
 
 The interpreter was tested with Python 3.8.2. Earlier versions of Python may not work.
 
