@@ -9,7 +9,6 @@ class Interpreter:
     def __init__(self, text=[]):
         self.text = text
         self.global_context = Context(None)
-
     def run(self):
         # set local global context and current context
         self.cur_context = self.global_context
@@ -29,7 +28,7 @@ class Interpreter:
                 if no_intro:
                     return None, SyntaxError('[Intro] block already found', pos)
                 no_intro = True
-                intro_info = ([], pos)
+                intro_info = ([], pos + 1)
                 # line is starting point of intro block
                 cur_block = TT_INTRO
             elif re.match(VERSE, line):
@@ -84,7 +83,7 @@ class Interpreter:
             elif cur_block == TT_CHORUS:
                 chorus_info[0].append(line)
             else:
-                print('Other!')
+                return None, SyntaxError('Not a statement', pos + 1)
             pos += 1
         # if loop stack has not been closed
         if loop_balance != 0:
@@ -100,7 +99,6 @@ class Interpreter:
             if error:
                 return None, error
         return None, None
-
     # code -> array of lines
     def execute(self, code, context, line_index):
         loop_stack = []
@@ -243,10 +241,9 @@ class Interpreter:
                     return None, Traceback(line_index + pos + 1, error)
                 cur_context.set_var(name, res)
             else:
-                print('Other!')
+                return None, SyntaxError('Not a statement', line_index + pos + 1)
             pos += 1
         return CONSTANTS['UNDEFINED'], None
-
     # evaluates an expression using expression_parser and lexer
     def evaluate(self, text, context):
         l = Lexer(text, context) # pass in current context as a parameter
@@ -258,7 +255,6 @@ class Interpreter:
         if error:
             return None, error
         return res, None
-
     # takes in function name and unevaluated arguments
     # executes function and returns result
     def exec(self, function, args, context):
@@ -284,7 +280,6 @@ class Interpreter:
         if error:
             return None, error
         return res, None
-
     # executes a built-in function
     def exec_builtin(self, function, args, context):
         # evaluate all arguments
@@ -381,7 +376,6 @@ class Interpreter:
                 return Token(TT_ARRAY, char_arr), None
             else:
                 return None, SyntaxError('Too many or too little arguments')
-
     def cast(self, token, new_type):
         if token.type == new_type:
             return token, None
