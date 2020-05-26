@@ -215,12 +215,19 @@ class Parser:
             self.start_stack.pop()
             return None, error
 
-        # do AND and OR operations
+        # do AND operation
         self.reset()
-        error = self.evaluate_for_binary([TT_AND, TT_OR])
+        error = self.evaluate_for_binary([TT_AND])
         if error:
             self.start_stack.pop()
             return None, error
+
+        # do OR operation
+        self.reset()
+        error = self.evaluate_for_binary([TT_OR])
+        if error:
+            self.start_stack.pop()
+            return None, error         
 
         # check for right parenthesis
         self.reset()
