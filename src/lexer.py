@@ -11,45 +11,40 @@ class Lexer:
         self.pos = -1
         self.cur_char = None
         self.advance()
-
-    # advances the pointer one step
     def advance(self):
+        """Advances the pointer one step"""
         self.pos += 1
         # if position is valid
-        self.cur_char = self.text[self.pos] if self.pos < len(
-            self.text) else None
-
+        self.cur_char = self.text[self.pos] if self.pos < len(self.text) else None
     def make_tokens(self):
+        """Makes tokens from stored text"""
         tokens = []
         parenthesis_balance = 0
         # handles case where text is empty
         if len(self.text.strip()) == 0:
             return None, IllegalCharError('Unexpected end of statement')
         # while there is still more text to parse
-        while self.cur_char != None:
+        while self.cur_char is not None:
             # if current character is a digit
             if self.cur_char.isdigit():
                 number, error = self.make_number()
-                if error:
+                if error is not None:
                     return None, error
                 tokens.append(number)
                 continue
             # if current character is in the alphabet (part of variable name)
             if self.cur_char.isalpha():
                 var, error = self.make_variable()
-                if error:
+                if error is not None:
                     return None, error
                 tokens.append(var)
                 continue
             # if current character could be the start of a complex operator
             if self.cur_char in SPECIAL_CHARACTERS:
-                op, error = self.make_operator()
-                if error:
+                operator, error = self.make_operator()
+                if error is not None:
                     return None, error
-                # if there is an operator
-                # even amounts of unary NOT will cancel eachother out
-                if op:
-                    tokens.append(op)
+                tokens.append(operator)
                 continue
             # if character is start of a char variable
             if self.cur_char == '\'':
@@ -62,7 +57,7 @@ class Lexer:
                     tokens.append(Token(TT_CHAR, char))
                     self.advance()
                     continue
-                elif char == '\\':
+                if char == '\\':
                     # otherwise if there is an escape character, read the next one instead
                     self.advance()
                     if self.cur_char == 'n':
@@ -112,14 +107,16 @@ class Lexer:
         if parenthesis_balance != 0:
             return None, IllegalCharError('Unbalanced parenthesis')
         return tokens, None
-
-    # parses a number
     def make_number(self):
+        """
+        Parses a number starting from current value pointed to.
+        Number could be INT or FLOAT.
+        """
         num = 0  # stores the number
         is_float = False
         decimal_digits = 0
         # while there is more text to parse and the current char is number or decimal
-        while self.cur_char != None and self.cur_char.isdigit() or self.cur_char == '.':
+        while self.cur_char is not None and (self.cur_char.isdigit() or self.cur_char == '.'):
             # if current char is decimal point
             if self.cur_char == '.':
                 # if there was already a decimal point
@@ -140,12 +137,14 @@ class Lexer:
             self.advance()
         # assign type to token
         return Token((TT_FLOAT if is_float else TT_INT), num), None
-
-    # parses a variable name
     def make_variable(self):
+        """
+        Parses a variable or language constant from current value pointed to.
+        Variables are taken from self.context.
+        """
         name = ''
         # while character exists and is still alphanumeric
-        while self.cur_char != None and (self.cur_char.isalpha() or self.cur_char == '_'):
+        while self.cur_char is not None and (self.cur_char.isalpha() or self.cur_char == '_'):
             name += self.cur_char
             self.advance()
         # if name is a language constant
@@ -161,11 +160,10 @@ class Lexer:
             cur_context = cur_context.parent
         # otherwise variable was not found
         return None, RuntimeError('Variable ' + name + ' not found')
-
-    # parses complex operators (non-binary, multiple characters, etc)
     def make_operator(self):
+        "Parses a complex operator from the current value pointed to"
         operator = ''
-        while self.cur_char != None and self.cur_char in SPECIAL_CHARACTERS:
+        while self.cur_char is not None and self.cur_char in SPECIAL_CHARACTERS:
             operator += self.cur_char
             self.advance()
         if operator == '&&':
