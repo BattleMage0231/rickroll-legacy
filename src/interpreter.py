@@ -15,7 +15,7 @@ class Interpreter:
         self.global_context = Context(None)
         self.cur_context = self.global_context
     def parse(self):
-        """Runs all of the stored code"""
+        """Parses the stored code"""
         no_intro = False
         no_chorus = False
         cur_block = None
@@ -98,6 +98,7 @@ class Interpreter:
         if cur_block == TT_VERSE:
             self.cur_context.add_function(cur_function)
     def run(self):
+        """Runs the stored code"""
         if self.intro_info is not None:
             res, error = self.execute(self.intro_info[0], self.global_context, self.intro_info[1], self.file)
             if error is not None:
@@ -135,7 +136,7 @@ class Interpreter:
                                     trace = Traceback(line + 1, error, func_file)
                                     return None, Traceback(line_index + pos + 1, trace, file)
                             if tmp_intro is not None:
-                                res, error = self.execute(tmp_intro[0], self.global_context, tmp_intro[1], tmp_inter.file)
+                                res, error = self.execute(tmp_intro[0], context, tmp_intro[1], tmp_inter.file)
                                 if error is not None:
                                     trace = Traceback(line + 1, error, func_file)
                                     return None, Traceback(line_index + pos + 1, trace, file)

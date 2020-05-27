@@ -328,7 +328,7 @@ class Context:
     def __init__(self, parent):
         self.parent = parent
         self.variable_cache = dict()
-        self.function_cache = dict() # name -> (args, src, start_line)
+        self.function_cache = dict() # name -> Function
     # for debugging
     def __repr__(self):
         return str([str(self.variable_cache), str(self.function_cache)])
