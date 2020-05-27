@@ -232,6 +232,33 @@ Never gonna say i
 
 Rickroll has several built-in functions callable in the same way as regular functions are called.
 
+## Imports
+If you're working with a large project (why would you ever do that?), you can import data from other files to organize your project. You may import a file in any context, even inside a function. Importing a file immediately loads all global functions from the file and then executes the code in the intro block in the current context.
+
+The syntax for imports is ```We're no stranges to ABS_PATH```, where ```ABS_PATH``` is the absolute path to the file.
+
+file.txt
+```
+[Intro]
+Never gonna let var down
+
+[Verse v]
+(Ooh give you up)
+Never gonna say var
+```
+
+```
+[Chorus]
+We're no strangers to C:\folder\another_folder\file.txt
+Never gonna run v and desert you
+Never gonna say var
+```
+
+```
+UNDEFINED
+UNDEFINED
+```
+
 ## Arrayof Function
 The arrayof function, callable by ```_arrayof```, takes any number of arguments and makes an array out of them.
 
