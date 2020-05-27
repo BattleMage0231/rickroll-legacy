@@ -58,7 +58,10 @@ TT_VERSE = 'VERSE'
 TT_CHORUS = 'CHORUS'
 
 # statements
+IMPORT = re.compile("^We\'re no strangers to .+$")
+
 SAY = re.compile("^Never gonna say .+$")
+
 DECLARE = re.compile("^Never gonna let \\w+ down$")
 ASSIGN = re.compile("^Never gonna give \\w+ .+$")
 
@@ -76,50 +79,62 @@ CALL_VALUE = re.compile("\\(Ooh give you \\w+\\) Never gonna run \\w+ and desert
 # Error
 
 class Error:
-    def __init__(self, name, details, line=None, child=None):
+    def __init__(self, name, details, line=None, child=None, file=None):
         self.name = name
         self.details = details
         self.line = line
         self.child = child
+        self.file = file
 
     def as_string(self):
         """Returns a string containing the error details"""
-        res = str(self.name)
+        res = ''
+        if self.child is not None:
+            res += self.child.as_string()
+            if self.line == self.child.line:
+                return res
+            res += '\n'
+        res += str(self.name)
         # line could be 0 so can't cast to boolean
         if self.line is not None:
             res += ' on line ' + str(self.line)
-        res += ': ' + str(self.details)
-        if self.child is not None:
-            res += '\n' + self.child.as_string()
+        if self.details:
+            res += ': ' + str(self.details)
+        if self.file is not None:
+            res += ' (in file ' + self.file + ')'
         return res
 
 class IllegalCharError(Error):
-    def __init__(self, details, line=None, child=None):
-        super().__init__('Illegal Character', details, line, child)
+    def __init__(self, details, line=None, file=None):
+        super().__init__('Illegal Character', details, line, None, file)
 
 class RuntimeError(Error):
-    def __init__(self, details, line=None, child=None):
-        super().__init__('Runtime Error', details, line, child)
+    def __init__(self, details, line=None, file=None):
+        super().__init__('Runtime Error', details, line, None, file)
 
 class IllegalArgumentError(Error):
-    def __init__(self, details, line=None, child=None):
-        super().__init__('Illegal Argument', details, line, child)
+    def __init__(self, details, line=None, file=None):
+        super().__init__('Illegal Argument', details, line, None, file)
 
 class SyntaxError(Error):
-    def __init__(self, details, line=None, child=None):
-        super().__init__('Syntax Error', details, line, child)
+    def __init__(self, details, line=None, file=None):
+        super().__init__('Syntax Error', details, line, None, file)
 
 class IllegalCastError(Error):
-    def __init__(self, details, line=None, child=None):
-        super().__init__('Illegal Cast', details, line, child)
+    def __init__(self, details, line=None, file=None):
+        super().__init__('Illegal Cast', details, line, None, file)
 
 class IndexOutOfBoundsError(Error):
-    def __init__(self, details, line=None, child=None):
-        super().__init__('Index Out of Bounds', details, line, child)
+    def __init__(self, details, line=None, file=None):
+        super().__init__('Index Out of Bounds', details, line, None, file)
+
+class FileError(Error):
+    def __init__(self, details, line=None, file=None):
+        super().__init__('File Error', details, line, None, file)
 
 class Traceback(Error):
-    def __init__(self, line=None, child=None):
-        super().__init__('Traceback', '', line, child)
+    def __init__(self, line=None, child=None, file=None):
+        super().__init__('Traceback', '', line, child, file)
 
 # Token
 
@@ -364,7 +379,9 @@ class Context:
             cur_context = cur_context.parent
         # if not throw an error
         return None, RuntimeError('Variable ' + name + ' doesn\'t exist')
-    def add_function(self, name, args, src, line):
+    def unsafe_set_function(self, name, args, src, line, file):
+        self.function_cache[name] = (args, src, line, file)
+    def add_function(self, name, args, src, line, file):
         """
         Adds a function (key -> (args, src, line)) to the function cache.
         Finding same function name returns an error.
@@ -376,7 +393,7 @@ class Context:
                 return RuntimeError('Function ' + name + ' already exists')
             cur_context = cur_context.parent
         # add tuple of function info (string array, string array)
-        self.function_cache[name] = (args, src, line)
+        self.function_cache[name] = (args, src, line, file)
     # get arguments and source code of function with name
     # returns (string array, string array) = (arguments, code lines)
     def get_function(self, name):
@@ -389,10 +406,10 @@ class Context:
         while cur_context is not None:
             if name in cur_context.function_cache:
                 # return unpacked tuple
-                name, args, src = cur_context.function_cache[name]
-                return name, args, src, None
+                name, args, src, file = cur_context.function_cache[name]
+                return name, args, src, file, None
             cur_context = cur_context.parent
-        return None, None, None, RuntimeError('Function ' + name + ' doesn\'t exist')
+        return None, None, None, None, RuntimeError('Function ' + name + ' doesn\'t exist')
 
 # Variable Constants
 

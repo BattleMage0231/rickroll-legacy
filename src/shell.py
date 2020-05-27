@@ -56,11 +56,16 @@ class Shell:
                 self.in_editor = True
             elif text == 'run':
                 try:
-                    inter = interpreter.Interpreter(self.code)
-                    exit_code, error = inter.run()
+                    inter = interpreter.Interpreter('EDITOR', self.code)
+                    error = inter.parse()
                     if error is not None:
                         err_str = error.as_string()
                         print(ShellColors.in_color(err_str, ShellColors.COLOR_RED))
+                    else:
+                        error = inter.run()
+                        if error is not None:
+                            err_str = error.as_string()
+                            print(ShellColors.in_color(err_str, ShellColors.COLOR_RED))
                 except KeyboardInterrupt:
                     print(INTERRUPTED)
                 except BaseException:
@@ -126,12 +131,16 @@ if __name__ == '__main__':
         file_name = sys.argv[1]
         if os.path.isfile(file_name):
             with open(file_name, 'r') as f:
-                src = f.read()
-                inter = interpreter.Interpreter(src.split('\n'))
+                src = f.read().split('\n')
                 try:
-                    exit_code, error = inter.run()
+                    inter = interpreter.Interpreter(os.path.basename(file_name), src)
+                    error = inter.parse()
                     if error is not None:
                         print(ShellColors.in_color(error.as_string(), ShellColors.COLOR_RED))
+                    else:
+                        error = inter.run()
+                        if error is not None:
+                            print(ShellColors.in_color(error.as_string(), ShellColors.COLOR_RED))
                 except KeyboardInterrupt:
                     print(INTERRUPTED)
                 except BaseException:

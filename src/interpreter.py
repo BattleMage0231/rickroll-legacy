@@ -7,20 +7,21 @@ from expression_parser import *
 from lexer import *
 
 class Interpreter:
-    def __init__(self, text=None):
+    def __init__(self, file, text=None):
+        self.file = file
         if text is None:
             text = []
         self.text = text
         self.global_context = Context(None)
         self.cur_context = self.global_context
-    def run(self):
+    def parse(self):
         """Runs all of the stored code"""
         no_intro = False
         no_chorus = False
         cur_block = None
         function_info = None
-        intro_info = None
-        chorus_info = None
+        self.intro_info = None
+        self.chorus_info = None
         loop_balance = 0
         pos = 0
         while pos < len(self.text):
@@ -29,9 +30,9 @@ class Interpreter:
                 pass
             elif INTRO.match(line):
                 if no_intro:
-                    return None, SyntaxError('[Intro] block already found', pos)
+                    return SyntaxError('[Intro] block must be the first block', pos + 1, self.file)
                 no_intro = True
-                intro_info = ([], pos + 1)
+                self.intro_info = ([], pos + 1)
                 # line is starting point of intro block
                 cur_block = TT_INTRO
             elif VERSE.match(line):
@@ -40,17 +41,19 @@ class Interpreter:
                 # if there was a previous verse, store it
                 if cur_block == TT_VERSE:
                     if loop_balance != 0:
-                        return None, RuntimeError('Unexpected function end', pos)
+                        return RuntimeError('Unexpected function end', pos + 1, self.file)
                     # tuple of (name, args, src, line)
-                    name, args, src, line = function_info
-                    self.cur_context.add_function(name, args, src, line)
+                    name, args, src, line, file = function_info
+                    error = self.cur_context.add_function(name, args, src, line, file)
+                    if error is not None:
+                        return None, error
                 loop_balance = 0
                 cur_block = TT_VERSE
                 name = line[7 : -1] # name of function
                 pos += 1 # arguments are on next line
                 # if arguments are missing
                 if pos == len(self.text) or not re.match(ARGUMENT_NAMES, self.text[pos].strip()):
-                    return None, SyntaxError('Unexpected EOF (no parameters provided)', pos)
+                    return SyntaxError('Unexpected EOF (no parameters provided)', pos + 1, self.file)
                 else:
                     # get arguments delimited by space
                     arg_list = self.text[pos].strip()[14 : -1].split()
@@ -59,20 +62,22 @@ class Interpreter:
                     if len(args) == 1 and args[0] == 'up':
                         args = []
                     # store function info
-                    function_info = (name, args, [], pos + 1)
+                    function_info = (name, args, [], pos + 1, self.file)
             elif CHORUS.match(line):
                 if no_chorus:
-                    return None, SyntaxError('[Chorus] block already found', pos)
+                    return SyntaxError('[Chorus] block already found', pos + 1, self.file)
                 no_chorus = True
-                chorus_info = ([], pos + 1)
+                self.chorus_info = ([], pos + 1)
                 no_intro = True
                 # line is starting point of chorus block
                 # if there was a previous verse, store it
                 if cur_block == TT_VERSE:
                     if loop_balance != 0:
-                        return None, RuntimeError('Unexpected function end', pos)
-                    name, args, src, line = function_info
-                    self.cur_context.add_function(name, args, src, line)
+                        return RuntimeError('Unexpected function end', pos + 1, self.file)
+                    name, args, src, line, file = function_info
+                    error = self.cur_context.add_function(name, args, src, line, file)
+                    if error is not None:
+                        return None, error
                 loop_balance = 0
                 cur_block = TT_CHORUS
                 self.cur_context = Context(self.cur_context) # new local context
@@ -82,33 +87,32 @@ class Interpreter:
                 elif re.match(IF_END, line) or re.match(WHILE_END, line):
                     loop_balance -= 1
                 if loop_balance < 0:
-                    return None, RuntimeError('Unexpected function end', pos)
+                    return RuntimeError('Unexpected function end', pos + 1, self.file)
                 function_info[2].append(line) # do not execute immediately since part of block
             elif cur_block == TT_INTRO:
-                intro_info[0].append(line)
+                self.intro_info[0].append(line)
             elif cur_block == TT_CHORUS:
-                chorus_info[0].append(line)
+                self.chorus_info[0].append(line)
             else:
-                return None, SyntaxError('Not a statement', pos + 1)
+                return SyntaxError('Not a statement', pos + 1, self.file)
             pos += 1
         # if loop stack has not been closed
         if loop_balance != 0:
-            return None, RuntimeError('Unexpected EOF', pos)
+            return RuntimeError('Unexpected EOF', pos + 1, self.file)
         if cur_block == TT_VERSE:
-            name, args, src, line = function_info
-            self.cur_context.add_function(name, args, src, line)
-        if intro_info:
-            res, error = self.execute(intro_info[0], self.global_context, intro_info[1])
+            name, args, src, line, file = function_info
+            self.cur_context.add_function(name, args, src, line, file)
+    def run(self):
+        if self.intro_info is not None:
+            res, error = self.execute(self.intro_info[0], self.global_context, self.intro_info[1], self.file)
             if error is not None:
-                return None, error
-        if chorus_info:
-            res, error = self.execute(chorus_info[0], Context(self.global_context), chorus_info[1])
+                return error
+        if self.chorus_info:
+            res, error = self.execute(self.chorus_info[0], Context(self.global_context), self.chorus_info[1], self.file)
             if error is not None:
-                return None, error
-        return None, None
-    # code -> array of lines
-    def execute(self, code, context, line_index):
-        """Executes some code in context"""
+                return error
+    def execute(self, code, context, line_index, file):
+        """Executes some code in context where code is stored as an array of lines"""
         loop_stack = []
         cur_context = context
         pos = 0
@@ -116,6 +120,36 @@ class Interpreter:
             line = code[pos].strip()
             if not line:
                 pass
+            elif IMPORT.match(line):
+                path = line[22 : ].strip()
+                if os.path.isfile(path):
+                    try:
+                        with open(path, 'r') as import_file:
+                            tmp_inter = Interpreter(os.path.basename(path), import_file.read().split('\n'))
+                            error = tmp_inter.parse()
+                            if error is not None:
+                                trace = Traceback(line + 1, error, os.path.basename(path))
+                                return None, Traceback(line_index + pos + 1, trace, file)
+                            # hijack the function and intro info
+                            tmp_intro = tmp_inter.intro_info
+                            functions = tmp_inter.cur_context.function_cache
+                            for name in functions:
+                                args, src, line, func_file = functions[name]
+                                error = context.add_function(name, args, src, line, func_file)
+                                if error is not None:
+                                    trace = Traceback(line + 1, error, func_file)
+                                    return None, Traceback(line_index + pos + 1, trace, file)
+                            if tmp_intro is not None:
+                                res, error = self.execute(tmp_intro[0], self.global_context, tmp_intro[1], tmp_inter.file)
+                                if error is not None:
+                                    trace = Traceback(line + 1, error, func_file)
+                                    return None, Traceback(line_index + pos + 1, trace, file)
+                    except PermissionError:
+                        err_msg = 'Permission denied'
+                        return None, FileError(err_msg, line_index + pos + 1, file)
+                else:
+                    err_msg = 'File ' + path + ' does not exist or is invalid'
+                    return None, FileError(err_msg, line_index + pos + 1, file)
             elif SAY.match(line):
                 expr = line[16 : ] # get expression
                 # special command goodbye exits the program
@@ -124,40 +158,40 @@ class Interpreter:
                 # evaluate expression and print
                 res, error = self.evaluate(expr, cur_context)
                 if error is not None:
-                    return None, Traceback(line_index + pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error, file)
                 print(res)
             elif DECLARE.match(line):
                 name = line[16 : -5] # variable name
                 # add variable to current context
                 error = cur_context.add_var(name, CONSTANTS['UNDEFINED'])
                 if error is not None:
-                    return None, Traceback(line_index + pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error, file)
             elif ASSIGN.match(line):
                 value = line[17 : ] # get arguments as raw text
                 index = value.find(' ') # variable names cannot have spaces
                 # if no space found
                 if index == -1:
-                    return None, IllegalArgumentError(value, line_index + pos + 1)
+                    return None, IllegalArgumentError(value, line_index + pos + 1, file)
                 name = value[ : index] # everything before space is name
                 expr = value[index : ] # everything after is expression
                 value, error = self.evaluate(expr, cur_context)
                 if error is not None:
-                    return None, Traceback(line_index + pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error, file)
                 # set variable
                 error = cur_context.set_var(name, value)
                 if error is not None:
-                    return None, Traceback(line_index + pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error, file)
             elif CHECK_TRUE.match(line):
                 expr = line[20 : ] # get boolean expression
                 res, error = self.evaluate(expr, cur_context)
                 if error is not None:
-                    return None, Traceback(line_index + pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error, file)
                 if res.type != TT_BOOL:
                     res, error = self.cast(res, TT_BOOL)
                     if error is not None:
                         err_msg = 'Boolean expected, instead found ' + str(res)
                         err_index = line_index + pos + 1
-                        error = IllegalArgumentError(err_msg, err_index)
+                        error = IllegalArgumentError(err_msg, err_index, file)
                         return None, error
                 # if true, execute the inside
                 if res.value == 'TRUE':
@@ -182,21 +216,21 @@ class Interpreter:
                     # if position is end of file and balance is not 0
                     # then the loop is not balanced
                     if loop_balance != 0 and pos == len(self.text):
-                        return None, RuntimeError('Unexpected EOF', line_index + pos + 1)
+                        return None, RuntimeError('Unexpected EOF', line_index + pos + 1, file)
                     # position was already incremented to the next
                     # during the while loop so no need for pos += 1
                     continue
             elif IF_END.match(line):
                 # if loop stack is empty
                 if not loop_stack:
-                    return None, RuntimeError('Unexpected statement end', line_index + pos + 1)
+                    return None, RuntimeError('Unexpected statement end', line_index + pos + 1, file)
                 # if statement end, simply pop
                 loop_stack.pop()
                 cur_context = cur_context.parent # remove context
             elif WHILE_END.match(line):
                 # if loop stack is empty
                 if not loop_stack:
-                    return None, RuntimeError('Unexpected statement end', line_index + pos + 1)
+                    return None, RuntimeError('Unexpected statement end', line_index + pos + 1, file)
                 # reset position to the original position - 1
                 # pos gets incremented at the end of this loop
                 pos = loop_stack.pop() - 1
@@ -205,7 +239,7 @@ class Interpreter:
                 # get return value
                 return_val, error = self.evaluate(line[51 : -1], cur_context)
                 if error is not None:
-                    return None, Traceback(line_index + pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error, file)
                 # prematurely return
                 return return_val, None
             elif CALL.match(line):
@@ -216,9 +250,9 @@ class Interpreter:
                 # get arguments trimmed and delimited by ', '
                 # also prune arguments for empty spaces
                 args = [arg.strip() for arg in value[index + 7 : ].split(',') if arg.strip()]
-                res, error = self.exec(name, args, cur_context)
+                res, error = self.exec(name, args, cur_context, file)
                 if error is not None:
-                    return None, Traceback(line_index + pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error, file)
             elif CALL_VALUE.match(line):
                 value = line[14 : ]
                 index = value.find(' ')
@@ -230,13 +264,13 @@ class Interpreter:
                 # get arguments trimmed and delimited by ', '
                 # also prune arguments for empty spaces
                 args = [arg.strip() for arg in value[index + 7 : ].split(', ') if arg.strip()]
-                res, error = self.exec(name, args, cur_context)
+                res, error = self.exec(name, args, cur_context, file)
                 if error is not None:
-                    return None, Traceback(line_index + pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error, file)
                 # assign value to return)var
                 error = cur_context.set_var(return_var, res)
                 if error is not None:
-                    return None, Traceback(line_index + pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error, file)
             elif CAST.match(line):
                 value = line[17 : ]
                 index = value.find(' ')
@@ -244,13 +278,13 @@ class Interpreter:
                 to_type = value[index + 1 : ]
                 var, error = cur_context.get_var(name)
                 if error is not None:
-                    return None, Traceback(line_index + pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error, file)
                 res, error = self.cast(var, to_type)
                 if error is not None:
-                    return None, Traceback(line_index + pos + 1, error)
+                    return None, Traceback(line_index + pos + 1, error, file)
                 cur_context.set_var(name, res)
             else:
-                return None, SyntaxError('Not a statement', line_index + pos + 1)
+                return None, SyntaxError('Not a statement', line_index + pos + 1, file)
             pos += 1
         return CONSTANTS['UNDEFINED'], None
     def evaluate(self, text, context):
@@ -264,7 +298,7 @@ class Interpreter:
         if error is not None:
             return None, error
         return res, None
-    def exec(self, function, args, context):
+    def exec(self, function, args, context, file):
         """
         Executes the function with the given function name.
         Function must be inside context with same number of arguments.
@@ -277,19 +311,27 @@ class Interpreter:
         if function in FUNCTION_CONSTANTS:
             return self.exec_builtin(function, args, context)
         # otherwise get arguments, source code, and line index from current context
-        func_args, src, line, error = context.get_function(function)
+        func_args, src, line, func_file, error = context.get_function(function)
         if error is not None:
+            if file != func_file:
+                return None, Traceback(line + 1, error, func_file)
             return None, error
         if len(args) != len(func_args):
+            if file != func_file:
+                return None, Traceback(line + 1, SyntaxError('Too many or too little arguments'), func_file)
             return None, SyntaxError('Too many or too little arguments')
         new_context = Context(self.global_context)
         for (arg, func_arg) in zip(args, func_args):
             res, error = self.evaluate(arg, context)
             if error is not None:
+                if file != func_file:
+                    return None, Traceback(line + 1, error, func_file)
                 return None, error
             new_context.unsafe_set_var(func_arg, res) # allow duplicate variables in global
-        res, error = self.execute(src, new_context, line)
+        res, error = self.execute(src, new_context, line, func_file)
         if error is not None:
+            if file != func_file:
+                return None, Traceback(line + 1, error, func_file)
             return None, error
         return res, None
     # executes a built-in function
