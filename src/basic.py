@@ -379,9 +379,9 @@ class Context:
             cur_context = cur_context.parent
         # if not throw an error
         return None, RuntimeError('Variable ' + name + ' doesn\'t exist')
-    def unsafe_set_function(self, name, args, src, line, file):
-        self.function_cache[name] = (args, src, line, file)
-    def add_function(self, name, args, src, line, file):
+    def unsafe_set_function(self, func):
+        self.function_cache[func.name] = func
+    def add_function(self, func):
         """
         Adds a function (key -> (args, src, line)) to the function cache.
         Finding same function name returns an error.
@@ -389,11 +389,11 @@ class Context:
         cur_context = self
         # check duplicate names
         while cur_context is not None:
-            if name in cur_context.function_cache:
-                return RuntimeError('Function ' + name + ' already exists')
+            if func.name in cur_context.function_cache:
+                return RuntimeError('Function ' + func.name + ' already exists')
             cur_context = cur_context.parent
         # add tuple of function info (string array, string array)
-        self.function_cache[name] = (args, src, line, file)
+        self.function_cache[func.name] = func
     # get arguments and source code of function with name
     # returns (string array, string array) = (arguments, code lines)
     def get_function(self, name):
@@ -405,11 +405,20 @@ class Context:
         # find function if it exists
         while cur_context is not None:
             if name in cur_context.function_cache:
-                # return unpacked tuple
-                name, args, src, file = cur_context.function_cache[name]
-                return name, args, src, file, None
+                return cur_context.function_cache[name], None
             cur_context = cur_context.parent
-        return None, None, None, None, RuntimeError('Function ' + name + ' doesn\'t exist')
+        return None, RuntimeError('Function ' + name + ' doesn\'t exist')
+
+class Function:
+    def __init__(self, name, args, src, line, file):
+        self.name = name
+        self.args = args
+        self.src = src
+        self.line = line
+        self.file = file
+
+    def __repr__(self):
+        return self.name
 
 # Variable Constants
 

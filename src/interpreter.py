@@ -19,7 +19,7 @@ class Interpreter:
         no_intro = False
         no_chorus = False
         cur_block = None
-        function_info = None
+        cur_function = None
         self.intro_info = None
         self.chorus_info = None
         loop_balance = 0
@@ -42,9 +42,7 @@ class Interpreter:
                 if cur_block == TT_VERSE:
                     if loop_balance != 0:
                         return RuntimeError('Unexpected function end', pos + 1, self.file)
-                    # tuple of (name, args, src, line)
-                    name, args, src, line, file = function_info
-                    error = self.cur_context.add_function(name, args, src, line, file)
+                    error = self.cur_context.add_function(cur_function)
                     if error is not None:
                         return None, error
                 loop_balance = 0
@@ -61,8 +59,7 @@ class Interpreter:
                     # up is a constant for no args
                     if len(args) == 1 and args[0] == 'up':
                         args = []
-                    # store function info
-                    function_info = (name, args, [], pos + 1, self.file)
+                    cur_function = Function(name, args, [], pos + 1, self.file)
             elif CHORUS.match(line):
                 if no_chorus:
                     return SyntaxError('[Chorus] block already found', pos + 1, self.file)
@@ -74,8 +71,7 @@ class Interpreter:
                 if cur_block == TT_VERSE:
                     if loop_balance != 0:
                         return RuntimeError('Unexpected function end', pos + 1, self.file)
-                    name, args, src, line, file = function_info
-                    error = self.cur_context.add_function(name, args, src, line, file)
+                    error = self.cur_context.add_function(cur_function)
                     if error is not None:
                         return None, error
                 loop_balance = 0
@@ -88,7 +84,7 @@ class Interpreter:
                     loop_balance -= 1
                 if loop_balance < 0:
                     return RuntimeError('Unexpected function end', pos + 1, self.file)
-                function_info[2].append(line) # do not execute immediately since part of block
+                cur_function.src.append(line) # do not execute immediately since part of block
             elif cur_block == TT_INTRO:
                 self.intro_info[0].append(line)
             elif cur_block == TT_CHORUS:
@@ -100,8 +96,7 @@ class Interpreter:
         if loop_balance != 0:
             return RuntimeError('Unexpected EOF', pos + 1, self.file)
         if cur_block == TT_VERSE:
-            name, args, src, line, file = function_info
-            self.cur_context.add_function(name, args, src, line, file)
+            self.cur_context.add_function(cur_function)
     def run(self):
         if self.intro_info is not None:
             res, error = self.execute(self.intro_info[0], self.global_context, self.intro_info[1], self.file)
@@ -134,8 +129,8 @@ class Interpreter:
                             tmp_intro = tmp_inter.intro_info
                             functions = tmp_inter.cur_context.function_cache
                             for name in functions:
-                                args, src, line, func_file = functions[name]
-                                error = context.add_function(name, args, src, line, func_file)
+                                error = context.add_function(functions[name])
+                                func_file = functions[name].file
                                 if error is not None:
                                     trace = Traceback(line + 1, error, func_file)
                                     return None, Traceback(line_index + pos + 1, trace, file)
@@ -311,7 +306,11 @@ class Interpreter:
         if function in FUNCTION_CONSTANTS:
             return self.exec_builtin(function, args, context)
         # otherwise get arguments, source code, and line index from current context
-        func_args, src, line, func_file, error = context.get_function(function)
+        function_info, error = context.get_function(function)
+        func_file = function_info.file
+        line = function_info.line
+        func_args = function_info.args
+        src = function_info.src
         if error is not None:
             if file != func_file:
                 return None, Traceback(line + 1, error, func_file)
