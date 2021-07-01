@@ -1,3 +1,5 @@
+# This repository contains the convoluted legacy implementation of the Rickroll programming language. For a more recent version, see the [Rust implementation](https://github.com/BattleMage0231/rickroll).
+
 # Rickroll
 
 Esoteric programming language with the only commands being lyrics from Never Gonna Give You Up
